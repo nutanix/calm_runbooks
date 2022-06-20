@@ -3,7 +3,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
+PC_IP = "@@{PC_IP}@@"
+pc_username = "@@{prism_central_username}@@"
+pc_password = "@@{prism_central_passwd}@@"
+
+def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
     url = "{proto}://{host}".format(proto=scheme, host=host)
     port = params.get('nutanix_port', '9440')
@@ -41,13 +45,17 @@ def create_vpc(**params):
     if params.get("externally_routable_prefix_list", "None") != "None":
         payload["spec"]["resources"]["externally_routable_prefix_list"] = \
                                 params["externally_routable_prefix_list"]
-    if params['operation'] == "create":
-        url = _build_url(scheme="https",
+    url = _build_url(scheme="https",
                         resource_type="/vpcs")    
-        data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                            @@{prism_central_passwd}@@),
+    data = requests.post(url, json=payload,
+                         auth=HTTPBasicAuth(pc_username, pc_password ),
                          timeout=None, verify=False)
+                         
+    if not data.ok:
+        print("Got Error ---> ",data.json().get('message_list', 
+                                data.json().get('error_detail', data.json())))
+        exit(1)
+    else:
         task_uuid = wait_for_completion(data)
         vpc = {"name": params['name'], 
                "uuid":data.json()['metadata']['uuid'],
@@ -61,21 +69,21 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                                            @@{prism_central_passwd}@@), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
                 sleep(5)                
             elif responce.json()['status'] == 'FAILED':
-                print("Got error while creating VPC ---> ",responce.json())
+                print("Got Error ---> ",responce.json().get('message_list', 
+                                        responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
-        state = data.json().get('state')
-        print("Got %s while creating VPC ---> "%state, data.json())
+        print("Got Error ---> ",data.json().get('message_list', 
+                                data.json().get('error_detail', data.json())))
         exit(1)
     return data.json()['status']['execution_context']['task_uuid']
     
@@ -88,8 +96,7 @@ def _get_vlan_uuid(**params):
     _url = _build_url(scheme="https",
                     resource_type="/subnets/list")
     _data = requests.post(_url, json={"kind": "subnet"},
-                        auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                           @@{prism_central_passwd}@@),
+                        auth=HTTPBasicAuth(pc_username, pc_password),
                         verify=False)
     _uuid = ""
     if vlan_name in str(_data.json()):
@@ -103,39 +110,35 @@ def _get_vlan_uuid(**params):
 
 def validate_params():
     params = {}
-    params['operation'] = @@{operation}@@
-    if params['operation'] == "delete":
-        exit(0)
-    else:      
-        print("##### creating VPC #####")
-        vpc_details = []
-        _params = @@{vpc_items}@@
-        params['operation'] = @@{operation}@@
-        for x in range(len(_params)):
-            sleep(5)
-            params_dict = _params[x]
-            params['name'] = params_dict['name']
-            params['uuid'] = params_dict.get('uuid', "None")
-            if params_dict.get("dns_servers", "None") != "None":
-                params["common_domain_name_server_ip_list"] = [{}]
-                params["common_domain_name_server_ip_list"][0]['ip'] = \
+    print("##### creating VPC #####")
+    vpc_details = []
+    params_dict = @@{vpc_items}@@
+    params['name'] = params_dict['name']
+    params['uuid'] = params_dict.get('uuid', "None")
+    if params_dict.get("dns_servers", "None") != "None":
+        params["common_domain_name_server_ip_list"] = [{}]
+        params["common_domain_name_server_ip_list"][0]['ip'] = \
                                             params_dict.get('dns_servers', 'None')
-            params["external_subnet_list"] = [{}]
-            if params_dict.get("externally_routable_ip", "None") != "None":
-                params["externally_routable_prefix_list"] = [{}]
-                params["externally_routable_prefix_list"][0]["ip"] = \
+    params["external_subnet_list"] = [{}]
+    if params_dict.get("externally_routable_ip", "None") != "None":
+        params["externally_routable_prefix_list"] = [{}]
+        params["externally_routable_prefix_list"][0]["ip"] = \
                                             params_dict["externally_routable_ip"]
-                params["externally_routable_prefix_list"][0]["prefix_length"] = \
+        params["externally_routable_prefix_list"][0]["prefix_length"] = \
                                             params_dict["externally_routable_ip_prefix"]
-            if params_dict.get("external_subnet_name", "None") != "None":
-                params["external_subnet_list"][0]["external_subnet_reference"] = {}
-                params["external_subnet_list"][0]["external_subnet_reference"]["kind"] = "subnet"
-                params["external_subnet_list"][0]["external_subnet_reference"]["name"] = \
+                                            
+    if params_dict.get("external_subnet_name", "None") != "None":
+        params["external_subnet_list"][0]["external_subnet_reference"] = {}
+        params["external_subnet_list"][0]["external_subnet_reference"]["kind"] = "subnet"
+        params["external_subnet_list"][0]["external_subnet_reference"]["name"] = \
                                             params_dict["external_subnet_name"]
-            if params_dict.get("external_subnet_uuid", "None") == "None":
-                params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
+        params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
                                             _get_vlan_uuid(**params_dict)
-            vpc_details.append(create_vpc(**params))
-        print("vpc_details={}".format(vpc_details))
+                                            
+    if params_dict.get("external_subnet_uuid", "None") != "None":
+        params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
+                                                    params_dict['external_subnet_uuid']
+    vpc_details.append(create_vpc(**params))
+    print("vpc_details={}".format(vpc_details))
 
 validate_params()
