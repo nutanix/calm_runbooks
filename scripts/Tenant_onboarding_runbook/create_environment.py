@@ -2,8 +2,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
+PC_IP = "@@{PC_IP}@@"
+pc_username = "@@{prism_central_username}@@"
+pc_password = "@@{prism_central_passwd}@@"
 
-def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
+def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
     url = "{proto}://{host}".format(proto=scheme, host=host)
     port = params.get('nutanix_port', '9440')
@@ -15,33 +18,24 @@ def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
         url += "/{0}".format(resource_type)
     return url
     
-def _get_spec(_count, **params):
-    tenantuuid = @@{UID}@@
+def _get_spec():
+    tenantuuid = "@@{tenant_uuid}@@"
     account = @@{account_details}@@
     project = @@{project_details}@@
-    env_passwd = @@{prism_central_passwd}@@
-    external_subnets = @@{external_subnet_details}@@
-    overlay_subnets = @@{overlay_subnet_details}@@
-    environment = params
+    vpc_details = @@{vpc_details}@@
+    project_subnet = @@{overlay_subnet_details}@@
+    env_memory = @@{project_memory}@@ * 1024
     subnet_references = []
     nic_list = []
-    for subnet in environment['subnets']:
-        nics = {}
-        nics['subnet_reference'] = {'uuid': subnet['uuid']}
-        subnet_references.append({'uuid': subnet['uuid']})
-        if "static_ip" in subnet:
-            try:
-        	    nics["ip_endpoint_list"] = [{"ip": subnet['static_ip']}]
-            except Exception as e:
-                print(e)
-                exit(1)
-        nic_list.append(nics)
+    nics = {}
+    nics['subnet_reference'] = {'uuid': project_subnet[0]["uuid"]}
+    subnet_references.append({'uuid': project_subnet[0]["uuid"]})
+    nic_list.append(nics)
     
     url = _build_url(scheme="https",
                     resource_type="/idempotence_identifiers")
     data = requests.post(url, json={"count": 2,"valid_duration_in_minutes": 527040},
-                        auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                           @@{prism_central_passwd}@@),
+                        auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
     creds_uuid = ""
     substrate_uuid = ""
@@ -49,106 +43,66 @@ def _get_spec(_count, **params):
         creds_uuid = data.json()['uuid_list'][0]
         substrate_uuid = data.json()['uuid_list'][1]
 
-    _creds_type = "PASSWORD"
-    _value = environment['creds'].get('passwd', 'None')
-    if environment['creds'].get('secret_key', 'None') != "None":
-        _creds_type = ""
-        _value = environment['creds']['secret_key']
+    _creds_type = "@@{credential_type}@@"
     credential_definition_list = [
                 		{
-                    		"name": "@@{calm_random}@@_cred",
+                    		"name": "@@{tenant_name}@@_cred",
                     		"type": _creds_type,
-                    		"username": environment['creds']['username'],
+                    		"username": "@@{credential_username}@@",
                     		"secret": {
                         		"attrs": {
                             		"is_secret_modified": True,
                                   	"secret_reference" : {}
                         		},
-                        		"value": _value
+                        		"value": """@@{password_or_key}@@"""
                     		},
                     		"uuid": creds_uuid
                 		}]
-
-    guest_customization = {}
-    if environment.get('guest_customization', 'no') != 'no' :
-        if environment.get('os_type').lower() == 'windows' :
-            guest_customization = {"sysprep":{"install_type": environment.get('install_type', 'FRESH'),
-                                              "unattend_xml": """@@{guest_customization_script}@@"""}}
-        else:
-            guest_customization = {"cloud_init":{"user_data": """@@{guest_customization_script}@@"""}}
-            
+    
+    if _creds_type == "KEY":
+        _pass = {"passphrase": {
+                    "attrs": {
+                        "is_secret_modified": True,
+                    },
+                    "value": "@@{prism_central_passwd}@@"
+                    }
+                }
+        credential_definition_list[0].update(_pass)
+    print(credential_definition_list)
     gpu_list = []
-    if environment.get("gpu_details", "None") != "None":
-        device_id = -1
-        for vgpu in environment['gpu_details']:
-            gpu_list.append({"vendor":vgpu['vendor'],
-                             "mode": vgpu.get("mode","PASSTHROUGH_GRAPHICS"),
-                             "device_id": device_id+1})
-                             
+
     disk_list = []
-    boot_type = environment.get("boot_type", "LEGACY")
-    device_index = 0
+    boot_type = "LEGACY"
+    boot_adapter = "SCSI"
+    image_uuid = ""
     boot_index = 0
     boot_adapter = "SCSI"
-    for _environment in environment['disks']:
-        if _environment.get('image', "None") != "None":
-            image_uuid = ""
-            if _environment.get('bootable', False) != False:
-                boot_index = device_index
-                boboot_adapterot = _environment.get("adapter_type","SCSI")
-            url = _build_url(scheme="https",
-                    resource_type="/images/list")
-            data = requests.post(url, json={"kind":"image", "filter":"name==%s"%_environment['image']},
-                                    auth=HTTPBasicAuth("admin", "Nutanix.123"),
-                                    timeout=None, verify=False)
-            if data.ok:
-                image_uuid = data.json()['entities'][0]['metadata']['uuid']
-            else:
-                print("Error -- %s Image not present on %s"%(_environment['image'], @@{PC_IP}@@))
-            disk_list.append({"data_source_reference": {
+    url = _build_url(scheme="https",
+        resource_type="/images/list")
+    data = requests.post(url, json={"kind":"image", "filter":"name==%s"%"@@{image_name}@@"},
+                            auth=HTTPBasicAuth("admin", "Nutanix.123"),
+                            timeout=None, verify=False)
+    if data.ok:
+        image_uuid = data.json()['entities'][0]['metadata']['uuid']
+    else:
+        print("Error -- %s Image not present on %s"%("@@{image_name}@@", PC_IP))
+    disk_list.append({"data_source_reference": {
                         "kind": "image",
-                        "name": _environment['image'],
+                        "name": "@@{image_name}@@",
                         "uuid": image_uuid
                         },
                         "device_properties": {
-                        "device_type": _environment.get("device_type", "DISK"),
+                        "device_type": "DISK",
                         "disk_address": {
-                            "device_index": device_index,
-                            "adapter_type": _environment.get("adapter_type","SCSI")
+                            "device_index": 0,
+                            "adapter_type": "SCSI"
                         }},
-                        "disk_size_mib": _environment.get('disk_size_mib', 1),
-                        })
-        elif  _environment.get('device_type', "None") == "CDROM":
-            if _environment.get('bootable', False) != False:
-                boot_index = device_index
-                boot_adapter = _environment.get("adapter_type","SCSI")
-            disk_list.append({"data_source_reference": {},
-                        "device_properties": {
-                        "device_type": _environment.get("device_type", "DISK"),
-                        "disk_address": {
-                            "device_index": device_index,
-                            "adapter_type": _environment.get("adapter_type","SCSI")
-                        }},
-                        "disk_size_mib": _environment.get('disk_size_mib', 1),
-                        })
-        else:
-            if _environment.get('bootable', False) != False:
-                boot_index = device_index
-                boot_adapter = _environment.get("adapter_type","SCSI")
-            disk_list.append({"device_properties": {
-                        "device_type": _environment.get("device_type", "DISK"),
-                        "disk_address": {
-                            "device_index": device_index,
-                            "adapter_type": _environment.get("adapter_type","SCSI")
-                        }},
-                        "disk_size_mib": _environment.get('disk_size_mib', 1),
-                        })
-        device_index += 1
+                        "disk_size_mib": 10,
+                        }
+                    )
 
     serial_port = []
-    if environment.get('serial_port', 'None') != 'None':
-        for port in environment['serial_port']:
-            serial_port.append({"index": port['index'], "is_connected": port['is_connected']})
+    serial_port.append({"index": 0, "is_connected": True})
         
     return ({
     		"api_version": "3.0",
@@ -161,23 +115,28 @@ def _get_spec(_count, **params):
         		}
     		},
     		"spec": {
-        		"name": tenantuuid['tenant_uuid']+"_"+project['name']+"_%s"%_count,
-        		"description": tenantuuid['tenant_uuid']+project['name'],
+        		"name": project['name']+"_Environment",
+        		"description": tenantuuid+project['name'],
         		"resources": {
             		"substrate_definition_list": [
                 		{
                     		"variable_list": [],
                     		"type": "AHV_VM",
-                    		"os_type": environment['os_type'],
+                    		"os_type": "@@{environment_os}@@",
                     		"action_list": [],
                     		"create_spec": {
-                        		"name": "vm_"+tenantuuid['tenant_uuid'],
+                        		"name": project['name']+"_VM",
                                 "categories": {},
+                                "cluster_reference": {
+                                    "kind": "cluster",
+                                    "type": "",
+                                    "name": "@@{cluster_name}@@",
+                                    "uuid": "@@{cluster_uuid}@@"
+                                },
                         		"resources": {
                             		"disk_list": disk_list,
                                     "gpu_list": gpu_list,
                                     "serial_port_list": serial_port,
-                                    "guest_customization":guest_customization,
                             		"nic_list": nic_list,
                                     "power_state": "ON",
                             		"boot_config": {
@@ -189,25 +148,25 @@ def _get_spec(_count, **params):
                                 		},
                                 		"boot_type": boot_type
                             		},
-                            		"num_sockets": environment['num_sockets'],
-                            		"num_vcpus_per_socket": environment['num_vcpus_per_socket'],
-                            		"memory_size_mib": environment['memory_size_mb'],
+                            		"num_sockets": 2,
+                            		"num_vcpus_per_socket": @@{project_vcpu}@@,
+                            		"memory_size_mib": env_memory,
                             		"account_uuid": account['uuid'],
                                     
                         		},
-                        		"categories": {@@{tenant_name}@@: tenantuuid['tenant_uuid']}
+                        		"categories": {"TenantName":"@@{tenant_name}@@"}
                     		},
                     		"readiness_probe": {
                         		"disable_readiness_probe": False,
-                        		"connection_type": environment.get("connection_type", "SSH"),
-                        		"connection_port": environment.get("connection_port", 22),
-                                "connection_protocol": environment.get("connection_protocol", "HTTP"),
-                                "delay_secs": environment.get("delay", "1"),
+                        		"connection_type": "SSH",
+                        		"connection_port": 22,
+                                "connection_protocol": "HTTP",
+                                "delay_secs": "5",
                         		"login_credential_local_reference": {
                             		"kind": "app_credential",
                             		"uuid": creds_uuid
                         		},
-                                "address": environment['subnets'][0].get('static_ip', "None")
+                                "address": "@@{project_subnet_address}@@"
                     		},
                     		"name": "Untitled",
                             "uuid": substrate_uuid
@@ -222,34 +181,38 @@ def _get_spec(_count, **params):
                     		},
                     		"type": "nutanix_pc",
                     		"subnet_references": subnet_references,
-                    		"default_subnet_reference": subnet_references[0]
+                    		"default_subnet_reference": subnet_references[0],
+                            "vpc_references": [{"uuid":vpc_details[0]["uuid"]}],
+                            "cluster_references": [{"uuid":"@@{cluster_uuid}@@"}]
                 		}
             		]
         		}
     		}})
 
-def create_env(_count, **params):
-    payload = _get_spec(_count, **params)
+def create_env():
+    payload = _get_spec()
+    guest_customization = {}
+    if "@@{environment_os}@@" == "Windows":
+        guest_customization = {"sysprep":{"install_type": 'FRESH',
+                                              "unattend_xml": """@@{guest_customization_script}@@"""}}
+    else:
+        guest_customization = {"cloud_init":{"user_data": """@@{guest_customization_script}@@"""}}
+    payload['spec']['resources']['substrate_definition_list'][0]['create_spec']\
+             ['resources']['guest_customization'] = guest_customization
+        
     url = _build_url(scheme="https",
                     resource_type="/environments")
     data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                           @@{prism_central_passwd}@@),
+                        auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
     if not data.ok:
-        print("Got error while creating environment", data.json()['message_list'])
+        print("Error while creating environment ---> ",data.json().get('message_list', 
+                                data.json().get('error_detail', data.json())))
         exit(1)
-    default = True
-    if params.get('default', False) == False:
-        default = False
     return {"uuid": data.json()['metadata']['uuid'],
            			"name":payload['spec']['name'],
-                    "default": default}
-params = @@{environment_items}@@
+                    "default": True}
 environments = []
-_count = 1
-for _params in params:
-    environments.append(create_env(_count, **_params))
-    sleep(5)
-    _count += 1
+if "@@{create_environment}@@" == "yes":
+    environments.append(create_env())
 print("environment_details={}".format(environments))
