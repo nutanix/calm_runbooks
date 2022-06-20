@@ -4,7 +4,7 @@
 | Tenant Name                     |  tenant_name                | Mandatory  | Name of Tenant. It will be used to create Subnets, VPC, Project , Category, VPC_Tunnel.  |
 | Delete Existing setup           |  delete_existing            | Mandatory  | If "yes" It will delete existing project, VPC, Subnets of "Tenant Name" if tenant name is same.  |
 | PC IP                           |  PC_IP                      | Mandatory  | Prism Central IP address on which Tenant needs to be onboard.  |
-| IDP Name                        |  idp_name                   | Mandatory  | Prism Central IP address on which Tenant needs to be onboard.  |
+| IDP Name                        |  idp_name                   | Mandatory  | Identity provider's Name. User Can provide any name.  |
 | IDP Metadata                    |  idp_metadata               | Mandatory  | Identity Provider's metadata in XML format.  |
 | Admin User for Project          |  project_admin_user         | Mandatory  | Username to add user in tenant's project as Admin.  |
 | Cluster Name                    |  cluster_name               | Mandatory  | Cluster name for Tenant.  |
