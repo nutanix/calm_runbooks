@@ -2,8 +2,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
+PC_IP = "@@{PC_IP}@@"
+pc_username = "@@{prism_central_username}@@"
+pc_password = "@@{prism_central_passwd}@@"
 
-def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
+def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
     url = "{proto}://{host}".format(proto=scheme, host=host)
     port = params.get('nutanix_port', '9440')
@@ -19,100 +22,144 @@ def _get_spec(project):
     url = _build_url(scheme="https",
                     resource_type="/projects_internal/{}".format(project))
     data = requests.get(url,
-                        auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                           @@{prism_central_passwd}@@),
+                        auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
     return data.json()
   
+def user_list(user_name, user_uuid, idp_uuid):
+    return([
+              {
+                "metadata": {
+                  "kind": "user",
+                  "uuid": user_uuid
+                },
+                "user": {
+                  "resources": {
+                    "identity_provider_user": {
+                      "username": user_name,
+                      "identity_provider_reference": {
+                        "uuid": idp_uuid,
+                        "kind": "identity_provider"
+                      }
+                    }
+                  }
+                },
+                "operation": "ADD"
+              }
+            ])
+def get_user_uuid(user, **params):
+    _payload = {"entity_type": "abac_user_capability",
+                "group_member_attributes": [
+               {
+                   "attribute": "display_name"
+               },
+               {
+                   "attribute": "user_uuid"
+               },
+               {
+                   "attribute": "username"
+               }
+           ],
+           "query_name": "prism:BaseGroupModel"
+         }
+    url = _build_url(scheme="https",
+                    resource_type="/groups")
+    data = requests.post(url, json=_payload,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)
+    if data.ok:
+        for user_data in data.json()["group_results"][0]["entity_results"]:
+            if user_data["data"][2]["values"][0]["values"][0] == user.strip():
+                return user_data["entity_id"]
+    else:
+        print("Error while fetching user details :- ",data.json())
+        exit(1)
+                
+    url = _build_url(scheme="https",
+                    resource_type="/idempotence_identifiers/salted")
+    payload = {"name_list":[user]}
+    data = requests.post(url, json=payload,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)                   
+    if data.ok:
+        _uuid = data.json()["name_uuid_list"][0][user]
+        print("user_uuid----> %s"%_uuid)
+        return _uuid
+    else:
+        print("Error while fetching user details :- ",data.json())
+        exit(1)
+        
 def update_project(**params):
     project = @@{project_details}@@
     project_items = @@{project_items}@@
-    users = @@{user_details}@@
-    groups_list = @@{group_details}@@
     payload = _get_spec(project['uuid'])
     for x in ['categories', 'categories_mapping', 'creation_time', 'last_update_time', 'owner_reference']:
         del payload['metadata'][x]
     del payload['status']
+    payload['spec']['access_control_policy_list'][0]['operation'] = "UPDATE"
+    payload['spec']['access_control_policy_list'][0]['acp']\
+        ['resources']['filter_list']['context_list'][0]\
+        ['scope_filter_expression_list'][0]['right_hand_side']['uuid_list'] = [project['uuid']]
+    
+    payload['spec']['access_control_policy_list'][0]['acp']['resources']\
+        ['filter_list']['context_list'][1]['entity_filter_expression_list']\
+        [4]['right_hand_side']['uuid_list'] = [project['uuid']]
+    
+    
+    payload['spec']['access_control_policy_list'][0]['acp']['resources']\
+        ['filter_list']['context_list'][2]['scope_filter_expression_list']\
+        [0]['right_hand_side']['uuid_list'] = [project['uuid']]
+    
     env_uuid = @@{environment_details}@@
     payload['spec']['project_detail']['resources']['environment_reference_list'] = []
-
-    default_env_uuid = env_uuid[0]['uuid']
-    for env in env_uuid:
-        if env.get('default', False) == True:
-            default_env_uuid = env['uuid']
-        payload['spec']['project_detail']['resources']\
-            ['environment_reference_list'].append({"kind":"environment",
+    if "@@{create_environment}@@" == "yes":
+        default_env_uuid = env_uuid[0]['uuid']
+        for env in env_uuid:
+            if env.get('default', False) == True:
+                default_env_uuid = env['uuid']
+            payload['spec']['project_detail']['resources']\
+                ['environment_reference_list'].append({"kind":"environment",
                                                    "uuid":env['uuid']})
-    payload['spec']['project_detail']['resources']\
-        ["default_environment_reference"] = {"kind":"environment",
-                                      "uuid":default_env_uuid}   
-    env = @@{environment_items}@@
-    for role in project_items[0]['tenant_users']:           
-        acp = {}
-        if 'admin' in role.keys():
-            acp = generate_acp(role="admin", users=role['admin'])
-                                
-        elif 'developer' in role.keys():
-            acp = generate_acp(role="developer", users=role['developer'])
-                                
-        elif 'operator' in role.keys():
-            acp = generate_acp(role="operator", users=role['operator'])
-                                
-        elif 'consumer' in role.keys():
-            acp = generate_acp(role="consumer", users=role['consumer'])
-        payload['spec']['access_control_policy_list'].append(acp)
+        payload['spec']['project_detail']['resources']\
+            ["default_environment_reference"] = {"kind":"environment",
+                                      "uuid":default_env_uuid}
         
-    if project_items[0].get('tenant_group', 'None') != 'None':
-        for role in project_items[0]['tenant_group']:           
-            acp = {}
-            if 'admin' in role.keys():
-                acp = generate_acp(role="admin", groups=role['admin'])
-                                
-            elif 'developer' in role.keys():
-                acp = generate_acp(role="developer", groups=role['developer'])
-                                
-            elif 'operator' in role.keys():
-                acp = generate_acp(role="operator", groups=role['operator'])
-                                
-            elif 'consumer' in role.keys():
-                acp = generate_acp(role="consumer", groups=role['consumer'])
-            payload['spec']['access_control_policy_list'].append(acp)
-                        
-    pprint(payload)
     url = _build_url(scheme="https",
                     resource_type="/projects_internal/{}".format(project['uuid']))
     data = requests.put(url, json=payload,
-                        auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                           @@{prism_central_passwd}@@),
+                        auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
     if data.ok:
         task = wait_for_completion(data)       
         print("Project %s updated successfully"%project['name'])
     else:
         print("Error while updating project : %s"%data.json())
+        exit(1)
     
 def wait_for_completion(data):
-    if data.status_code in [200, 202]:
+    if data.ok:
         state = data.json()['status'].get('state')
         while state == "PENDING":
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
             responce = requests.get(url, auth=HTTPBasicAuth(
-                                    @@{prism_central_username}@@, 
-                                    @@{prism_central_passwd}@@),
+                                    pc_username, pc_password),
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
                 sleep(5)                
             elif responce.json()['status'] == 'FAILED':
+                print("Error in project update ---> ",responce.json().get('message_list', 
+                                        responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
         state = data.json().get('state')
-        print("Got %s while updating project ---> "%state, data.json())
+        print("Error in project update ---> ",data.json().get('message_list', 
+                                data.json().get('error_detail', data.json())))
         exit(1)
 
 def generate_filter_list_admin(project_uuid, collection):
@@ -335,15 +382,15 @@ def generate_filter_list_consumer(project_uuid, collection):
         ]})
     return acl 
   
-def generate_acp(role, users=None, groups=None):
+def generate_acp(role, user_details, users=None, groups=None):
     project = @@{project_details}@@
-    group_list = @@{group_details}@@
-    user_list = @@{user_details}@@
+    user_list = user_details
     projectUuid = project['uuid']
     user_name = @@{project_items}@@
+    group_list = @@{group_details}@@
 
     collection = "SELF_OWNED"
-    if user_name[0]['allow_collaboration']:
+    if @@{allow_collaboration}@@:
         collection = "ALL"
     role_uuid = "@@{ROLE_OPERATOR_UUID}@@"
     filter_list = generate_filter_list_operator(projectUuid, collection)
@@ -415,5 +462,4 @@ def generate_acp(role, users=None, groups=None):
     return access_control_policy_list
 
 params = @@{project_items}@@
-for _params in params:
-    update_project(**_params)
+update_project(**params)
