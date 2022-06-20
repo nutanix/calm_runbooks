@@ -1,5 +1,4 @@
 
-
 | Variable Display Name           | Variable Actual Name        | Type       | Description |
 | :-----------------------------  | :-------------------------- | :--------- | :------------- |
 | Protection Policy Name  | protection_policy_name  | Mandatory  | Name of protection policy.  |
