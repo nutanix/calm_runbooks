@@ -1,8 +1,44 @@
 
-| Variable Display Name        | Variable Actual Name           | Type  |  Description  |
-| ------------- |:-------------:| :-----:| :---------: |
-| col 3 is      | right-aligned | $1600 | SDF  |
-| col 2 is      | centered      |   $12 | WFA |
-| zebra stripes | are neat      |    $1 | Wq |
 
-
+| Variable Display Name           | Variable Actual Name        | Type       | Description |
+| :-----------------------------  | :-------------------------- | :--------- | :------------- |
+| Protection Policy Name  | protection_policy_name  | Mandatory  | Name of protection policy.  |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
