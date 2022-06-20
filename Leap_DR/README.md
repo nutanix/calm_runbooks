@@ -1,4 +1,4 @@
-
+**Input Variables information.**
 | Variable_Display_Name    | Variable_Actual_Name        | Type       | Description |
 | :---------------------  | :-------------------------- | :--------- | :---------- |
 | Protection Policy Name | protection_policy_name  | Mandatory  | Name of protection policy.  |
