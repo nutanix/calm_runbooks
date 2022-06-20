@@ -3,7 +3,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
+PC_IP = "@@{PC_IP}@@"
+pc_username = "@@{prism_central_username}@@"
+pc_password = "@@{prism_central_passwd}@@"
+
+def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
     url = "{proto}://{host}".format(proto=scheme, host=host)
     port = params.get('nutanix_port', '9440')
@@ -17,33 +21,51 @@ def _build_url(scheme, resource_type, host=@@{PC_IP}@@, **params):
   
 def _get_cluster_details(cluster_name):
     cluster_details = {'kind':'cluster'}
-    payload = {"entity_type": "cluster", "filter": "name==%s"%cluster_name}
+    payload = {"kind": "cluster"}
     url = _build_url(scheme="https",
-                    resource_type="/groups")
+                    resource_type="/clusters/list")
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(@@{prism_central_username}@@, @@{prism_central_passwd}@@), 
+                         auth=HTTPBasicAuth(pc_username, pc_password), 
                          verify=False)
     if data.ok:
-        cluster_details['uuid'] = str(data.json()['group_results'][0]['entity_results'][0]['entity_id'])
-        return cluster_details
+        for _cluster in data.json()['entities']:
+            if _cluster['status']['name'] == cluster_name:
+                cluster_details['uuid'] = str(_cluster['metadata']['uuid'])
+                return cluster_details
+        print("Input Error :- Given cluster %s not present on %s"%(cluster_name, PC_IP))
+        exit(1)
     else:
-        print("Failed to get %s cluster details"%cluster_name)
+        print("Error while fetching %s cluster info"%cluster_name)
+        print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
     
 def _get_virtual_switch_uuid(virtual_switch_name):
+    cluster = "@@{cluster_name}@@"
+    _cluster = _get_cluster_details(cluster)
+    cluster_uuid = _cluster['uuid']
     payload = {"entity_type": "distributed_virtual_switch", 
                "filter": "name==%s"%virtual_switch_name}
     url = _build_url(scheme="https",
                     resource_type="/groups")                
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(@@{prism_central_username}@@, @@{prism_central_passwd}@@),
+                         auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
     if data.ok:
-        print("virtual switch uuid ----> ",data.json()['group_results'][0]['entity_results'][0]['entity_id'])
-        return str(data.json()['group_results'][0]['entity_results'][0]['entity_id'])
+        _uuid = data.json()['group_results'][0]['entity_results'][0]['entity_id']
+        _url = "https://%s:9440/api/networking/v2.a1/dvs/virtual-switches/%s?proxyClusterUuid=%s"%(PC_IP,
+                                                                                                _uuid,
+                                                                                                cluster_uuid)
+        _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_password),verify=False)
+        if _data.json()['data']['name'] == virtual_switch_name:
+            print("virtual switch uuid ----> ",_uuid)
+            return str(_uuid)
+        else:
+            print("Input Error :- %s virtual switch not present on %s"%(virtual_switch_name, PC_IP))
+            exit(1)
     else:
-        print("Failed to get %s virtual switch uuid."%virtual_switch_name)
-        exit(1)
+        print("Error while fetching virtual switch details :- ",data.json().get('message_list',
+                                                                                data.json().get('error_detail', 
+                                                                                data.json())))
 
 def _get_default_spec():
     return (
@@ -69,11 +91,8 @@ def _get_ipam_spec(**params):
         ipam_spec["prefix_length"] = ipam_config["network_prefix"]
         ipam_spec["default_gateway_ip"] = ipam_config["gateway_ip"]
         pools = []
-        if params['dhcp'] != 'None':
-            for ip_pools in params['dhcp']:
-                pools.append({"range": "%s %s"%(ip_pools['ip_pools_start_ip'], 
-                                                ip_pools['ip_pools_end_ip'])})                                
-            ipam_spec["pool_list"] = pools
+        pools.append(params["ip_pools"])
+        ipam_spec["pool_list"] = pools
     return ipam_spec
 
 def _get_default_ipconfig_spec():
@@ -103,75 +122,86 @@ def create_external_subnet(**params):
         payload["spec"]["resources"]["virtual_switch_uuid"] = params['virtual_switch_uuid']
     payload["spec"]["resources"]["is_external"] = True
     payload["spec"]["resources"]["enable_nat"] = params['enable_nat']
-    pprint(payload)
-    if params['operation'] == "create":
-        url = _build_url(scheme="https",
-                        resource_type="/subnets")    
+    url = _build_url(scheme="https",
+                        resource_type="/subnets")
+    while True:
         data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(@@{prism_central_username}@@, 
-                                            @@{prism_central_passwd}@@),
+                         auth=HTTPBasicAuth(pc_username, 
+                                            pc_password),
                          timeout=None, verify=False)
         if data.ok:
             task_uuid = wait_for_completion(data)
             task = {"uuid": data.json()['metadata']['uuid'],
-                   "create_subnet_task_uuid":task_uuid,
-                   "name": params['name']}
+                    "create_subnet_task_uuid":task_uuid,
+                    "name": params['name']}
             return task
+        elif "subnet exists with VLAN ID" in str(data.json()):
+            payload["spec"]["resources"]["vlan_id"] = params['vlan_id'] + 5
         else:
-            print("Failed to create %s external subnet"%params['name'])
+            print("Got Error ---> ",data.json().get('message_list', 
+                                    data.json().get('error_detail', data.json())))
             exit(1)
 
 def wait_for_completion(data):
-    if data.status_code in [200, 202]:
+    if data.ok:
         state = data.json()['status'].get('state')
         while state == "PENDING":
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(@@{prism_central_username}@@, @@{prism_central_passwd}@@), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
                                     verify=False)
-            print(responce.json())
             if responce.json()['status'] in ['PENDING', 'RUNNING','QUEUED']:
                 state = 'PENDING'
                 sleep(5)                
             elif responce.json()['status'] == 'FAILED':
-                print("Got error while creating subnet ---> ",responce.json())
+                print("Got Error ---> ",responce.json().get('message_list', 
+                                        responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
-    else:
-        state = data.json().get('state')
-        print("Got %s while creating subnet ---> "%state, data.json())
-        exit(1)
     return data.json()['status']['execution_context']['task_uuid']
             
+def _get_vlan_id():
+    url = _build_url(scheme="https",resource_type="/subnets/list")
+    data = requests.post(url, json={"kind":"subnet"},
+                         auth=HTTPBasicAuth(pc_username, 
+                                            pc_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        vlan_id = []
+        for x in data.json()['entities']:
+            print(x['spec']['resources'])
+            vlan_id.append(x['spec']['resources'].get('vlan_id', 0))
+        id = 10
+        while True:
+            if id in vlan_id:
+                id+=1
+            else:
+                break
+        return id
+    else:
+        print("Error while fetching subnet list :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
 def validate_params():
     params = {}
-    params['operation'] = @@{operation}@@
-    if params['operation'] == "delete":
-        exit(0)
-    else:
-        print("##### creating external subnet #####")
-        _params = @@{external_subnet_items}@@
-        params['operation'] = @@{operation}@@
-        subnets = []
-        for x in range(len(_params)):
-            sleep(5)
-            params_dict = _params[x]
-            params['name'] = params_dict['name']
-            params['uuid'] = params_dict.get('uuid', "None")
-            params['enable_nat'] = params_dict.get('enable_nat', False)
-            params['cluster_name'] = params_dict.get('cluster', "None")
-            params['vlan_id'] = params_dict.get('vlan_id')
-            params['virtual_switch_name'] = params_dict.get('virtual_switch_name', "None")
-            params['ipam'] = {}
-            params['set_ipam'] = "yes"
-            params['ipam']['network_ip'] = params_dict.get('network_ip', 'None')
-            params['ipam']['network_prefix'] = params_dict.get('prefix', 'None')
-            params['ipam']['gateway_ip'] = params_dict['gateway_ip']
-            params['dhcp'] = params_dict.get('dhcp', "None")
-            subnet = create_external_subnet(**params)
-            subnets.append(subnet)
-        print("external_subnet_details={}".format(subnets))
+    subnets = []
+    params_dict = @@{external_subnet_items}@@
+    params['name'] = params_dict['name']
+    params['uuid'] = params_dict.get('uuid', "None")
+    params['enable_nat'] = params_dict.get('enable_nat', False)
+    params['cluster_name'] = params_dict.get('cluster', "None")
+    params['vlan_id'] = @@{external_vlan_id}@@
+    params['virtual_switch_name'] = params_dict.get('virtual_switch_name', "None")
+    params['ipam'] = {}
+    params['set_ipam'] = "yes"
+    params['ipam']['network_ip'] = params_dict.get('network_ip', 'None')
+    params['ipam']['network_prefix'] = params_dict.get('prefix', 'None')
+    params['ipam']['gateway_ip'] = params_dict['gateway_ip']
+    params['ip_pools'] = params_dict['ip_pools']
+    subnet = create_external_subnet(**params)
+    subnets.append(subnet)
+    print("external_subnet_details={}".format(subnets))
 validate_params()
