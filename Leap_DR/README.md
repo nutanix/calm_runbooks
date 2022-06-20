@@ -1,6 +1,6 @@
 
-| Variable_Display_Name    | Variable Actual Name        | Type       | Description |
-| :---------------------:  | :-------------------------- | :--------- | :---------- |
+| Variable_Display_Name    | Variable_Actual_Name        | Type       | Description |
+| :---------------------  | :-------------------------- | :--------- | :---------- |
 | Protection Policy Name | protection_policy_name  | Mandatory  | Name of protection policy.  |
 | Recovery Plan Name  | recovery_plan_name  |   | Name of Recovery plan.  |
 | Custom RPO Interval for Replication in Hours  | custom_rpo_interval_replication  |   | Replication time frequencey to replicate VM snapshots from source to destination. Default Value is 1.   |
