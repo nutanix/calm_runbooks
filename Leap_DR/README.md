@@ -1,7 +1,7 @@
 
 | Variable Display Name           | Variable Actual Name        | Type       | Description |
 | -----------------------------  | :-------------------------- | :--------- | :------------- |
-| Protection Policy Name  | protection_policy_name  | Mandatory  | Name of protection policy.  |
+| Protection Policy Name | protection_policy_name  | Mandatory  | Name of protection policy.  |
 | Recovery Plan Name  | recovery_plan_name  |   | Name of Recovery plan.  |
 | Custom RPO Interval for Replication in Hours  | custom_rpo_interval_replication  |   | Replication time frequencey to replicate VM snapshots from source to destination.   |
 | Local Schedule  | local_schedule  |   | Local RPO schedule to keep snapshots of VM locally.  |
