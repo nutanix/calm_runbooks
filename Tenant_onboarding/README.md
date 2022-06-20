@@ -1,4 +1,4 @@
-**| Variable Display Name         | Variable Actual Name | Type  | Description   |**
+**| Variable Display Name         | Variable Actual Name        | Type  | Description                                                                            |**
 **| ----------------------------- | --------------------------- | ------------- | ------------- |**
   | Tenant Name                   |  tenant_name                |   |   |
 **| ----------------------------- | --------------------------- | ------------- | ------------- |**
