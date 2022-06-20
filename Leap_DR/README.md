@@ -1,9 +1,9 @@
 
-| Variable Display Name  | Variable Actual Name        | Type       | Description |
+| Variable_Display_Name    | Variable Actual Name        | Type       | Description |
 | :---------------------:  | :-------------------------- | :--------- | :---------- |
 | Protection Policy Name | protection_policy_name  | Mandatory  | Name of protection policy.  |
 | Recovery Plan Name  | recovery_plan_name  |   | Name of Recovery plan.  |
-| Custom RPO Interval for Replication in Hours  | custom_rpo_interval_replication  |   | Replication time frequencey to replicate VM snapshots from source to destination.   |
+| Custom RPO Interval for Replication in Hours  | custom_rpo_interval_replication  |   | Replication time frequencey to replicate VM snapshots from source to destination. Default Value is 1.   |
 | Local Schedule  | local_schedule  |   | Local RPO schedule to keep snapshots of VM locally.  |
 | Custom RPO Interval for Local Snapshot in Hours  | custom_rpo_interval_local  |   | Default Value is 1, Should be >= 1 for "Local Schedule = True".  |
 | Number of Snapshot Retention   | number_of_snapshot_retention  |   | How many snapshots should be retained. It will retain number of latest snapshots.  |
