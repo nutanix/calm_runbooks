@@ -19,12 +19,6 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def _get_vpc_details(vpc_name):
-    for vpc in @@{vpc_details}@@:
-        if vpc['name'] == vpc_name:
-            _vpc = {"kind": "vpc", "uuid": vpc['uuid']}
-            return _vpc
-
 def _get_default_spec():
     return (
         {
@@ -115,9 +109,8 @@ def wait_for_completion(data):
         exit(1)
     return data.json()['status']['execution_context']['task_uuid']  
                                      
-def overlay_subnet():
+def create_overlay_subnet():
     params = {}
-    overlay_subnet_details = []
     print("##### Creating Overlay Subnets #####")
     params_dict = @@{overlay_subnet_items}@@
     params['vpc_name'] = params_dict.get('vpc_name', 'None')
@@ -137,7 +130,8 @@ def overlay_subnet():
             
     payload = _get_default_spec()
     if params_dict.get('vpc_name', 'None') != 'None':
-        params['vpc_reference'] = _get_vpc_details(params['vpc_name'])
+        vpc_details = @@{vpc_details}@@
+        params['vpc_reference'] = {"kind": "vpc", "uuid": vpc_details["uuid"]}
         payload["spec"]["resources"]["vpc_reference"] = params['vpc_reference']
     payload["spec"]['name'] = params_dict['subnet_name']
     payload["spec"]["resources"]["subnet_type"] = "OVERLAY"
@@ -157,6 +151,5 @@ def overlay_subnet():
     details = {"uuid":data.json()['metadata']['uuid'],
                                "name": params_dict['subnet_name'],
                                "create_subnet_task_uuid": task_uuid}
-    overlay_subnet_details.append(details)
-    print("overlay_subnet_details={}".format(overlay_subnet_details))
-overlay_subnet()
+    print("overlay_subnet_details={}".format(details))
+create_overlay_subnet()
