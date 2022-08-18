@@ -387,37 +387,6 @@ def _get_group_spec():
   				}
 			})
             
-def convert_domain_to_ad_path(group_name):
-    path = ''
-    g_name, domain = group_name.split("@")
-    path = "cn=%s,cn=users"%g_name
-    for i in domain.split("."):
-        path = path + ',DC={}'.format(i)
-    
-    return path
-    
-def create_group(group):
-    payload = _get_group_spec()
-    group_name = convert_domain_to_ad_path(group)
-    if group != "None":
-        payload['spec']['resources']['directory_service_user_group']\
-        			['distinguished_name'] = group_name
-    url = _build_url(scheme="https",resource_type="/user_groups")
-    data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth("admin", 
-                                           "Nutanix.123"),
-                        timeout=None, verify=False)    
-    wait_for_completion(data)
-    
-    if not data.ok:
-        if "DUPLICATE" in str(data.json()):
-            return "ok"
-        else:
-            print("Error while creating user_group ----> ",data.json())
-            return "None"
-    else:
-        return "ok"    
-            
 def get_user_uuid(user, **params):
     _payload = {"entity_type": "abac_user_capability",
                 "group_member_attributes": [
@@ -472,11 +441,8 @@ def build_project(**params):
     print('ROLE_CONSUMER_UUID={}'.format(consumer_role_uuid))
         
     overlay_subnets = @@{overlay_subnet_details}@@
-    subnet_uuid = ""
-    subnet_name = ""
-    for _uuid in overlay_subnets:
-        subnet_uuid = _uuid['uuid']
-        subnet_name = _uuid['name']
+    subnet_uuid = overlay_subnets["uuid"]
+    subnet_name = overlay_subnets["name"]
     
     account_uuid = ""
     if params.get('accounts', 'None') != "None":
@@ -516,7 +482,7 @@ def build_project(**params):
                        idp_uuid=idp_uuid["uuid"], 
                        account_uuid=account_uuid, 
                        subnet_uuid=subnet_uuid,
-                       vpc_uuid=vpc_uuid[0]["uuid"],
+                       vpc_uuid=vpc_uuid["uuid"],
                        project_name=params['name'])
                        
     if params.get("quotas", "None") != "None":
@@ -584,9 +550,6 @@ def wait_for_completion(data):
                                 data.json().get('error_detail', data.json())))
             exit(1)
 
-def validate_params():
-    params = @@{project_items}@@
-    print("##### Creating a Project #####")
-    build_project(**params)                                                     
-
-validate_params()
+print("##### Creating a Project #####")
+params = @@{project_items}@@
+build_project(**params)                                                     
