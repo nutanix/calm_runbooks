@@ -110,19 +110,15 @@ def update_project(**params):
         ['filter_list']['context_list'][2]['scope_filter_expression_list']\
         [0]['right_hand_side']['uuid_list'] = [project['uuid']]
     
-    env_uuid = @@{environment_details}@@
+    environment_details = @@{environment_details}@@
     payload['spec']['project_detail']['resources']['environment_reference_list'] = []
     if "@@{create_environment}@@" == "yes":
-        default_env_uuid = env_uuid[0]['uuid']
-        for env in env_uuid:
-            if env.get('default', False) == True:
-                default_env_uuid = env['uuid']
-            payload['spec']['project_detail']['resources']\
+        payload['spec']['project_detail']['resources']\
                 ['environment_reference_list'].append({"kind":"environment",
-                                                   "uuid":env['uuid']})
+                                                   "uuid":environment_details['uuid']})
         payload['spec']['project_detail']['resources']\
             ["default_environment_reference"] = {"kind":"environment",
-                                      "uuid":default_env_uuid}
+                                      "uuid":environment_details['uuid']}
         
     url = _build_url(scheme="https",
                     resource_type="/projects_internal/{}".format(project['uuid']))
