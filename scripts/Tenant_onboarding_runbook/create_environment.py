@@ -28,8 +28,8 @@ def _get_spec():
     subnet_references = []
     nic_list = []
     nics = {}
-    nics['subnet_reference'] = {'uuid': project_subnet[0]["uuid"]}
-    subnet_references.append({'uuid': project_subnet[0]["uuid"]})
+    nics['subnet_reference'] = {'uuid': project_subnet["uuid"]}
+    subnet_references.append({'uuid': project_subnet["uuid"]})
     nic_list.append(nics)
     
     url = _build_url(scheme="https",
@@ -68,9 +68,8 @@ def _get_spec():
                     }
                 }
         credential_definition_list[0].update(_pass)
-    print(credential_definition_list)
-    gpu_list = []
 
+    gpu_list = []
     disk_list = []
     boot_type = "LEGACY"
     boot_adapter = "SCSI"
@@ -83,7 +82,12 @@ def _get_spec():
                             auth=HTTPBasicAuth("admin", "Nutanix.123"),
                             timeout=None, verify=False)
     if data.ok:
-        image_uuid = data.json()['entities'][0]['metadata']['uuid']
+        if data.json()["metadata"]["total_matches"] == 1:
+            image_uuid = data.json()['entities'][0]['metadata']['uuid']
+        else:
+            print("There are '%s' total images with name - @@{image_name}@@"%(\
+                                     data.json()["metadata"]["total_matches"]))
+            exit(1)
     else:
         print("Error -- %s Image not present on %s"%("@@{image_name}@@", PC_IP))
     disk_list.append({"data_source_reference": {
@@ -182,7 +186,7 @@ def _get_spec():
                     		"type": "nutanix_pc",
                     		"subnet_references": subnet_references,
                     		"default_subnet_reference": subnet_references[0],
-                            "vpc_references": [{"uuid":vpc_details[0]["uuid"]}],
+                            "vpc_references": [{"uuid":vpc_details["uuid"]}],
                             "cluster_references": [{"uuid":"@@{cluster_uuid}@@"}]
                 		}
             		]
@@ -212,7 +216,7 @@ def create_env():
     return {"uuid": data.json()['metadata']['uuid'],
            			"name":payload['spec']['name'],
                     "default": True}
-environments = []
+environment = ""
 if "@@{create_environment}@@" == "yes":
-    environments.append(create_env())
-print("environment_details={}".format(environments))
+    environment = create_env()
+print("environment_details={}".format(environment))
