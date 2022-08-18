@@ -60,8 +60,45 @@ def create_vpc(**params):
         vpc = {"name": params['name'], 
                "uuid":data.json()['metadata']['uuid'],
                "create_vpc_task_uuid": task_uuid}
+        create_static_route(vpc["uuid"])
         return vpc
+        
+def _get_route_spec(vpc_uuid, subnet_uuid,subnet_name):
+    ip_prefix = "0.0.0.0/0"
+    url = _build_url(scheme="https",
+                    resource_type="/vpcs/%s/route_tables"%vpc_uuid)
+    data = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
+    if data.ok:
+        responce = data.json()
+        del responce["status"]
+        for x in ["last_update_time","creation_time","spec_hash","categories_mapping","owner_reference","categories"]:
+            if x in responce["metadata"].keys():
+                del responce["metadata"][x]
+    else:
+        print("Error while fetching VPCs static route details.")
+        exit(1)
+    static_route = {"nexthop": {
+                        "external_subnet_reference": {
+                            "kind": "subnet",
+                            "name": subnet_name,
+                            "uuid": subnet_uuid
+                        }
+                    },
+                    "destination": ip_prefix}
+    responce["spec"]["resources"]["static_routes_list"].append(static_route)
+    return responce
 
+def create_static_route(vpc_uuid):
+    subnet = @@{external_subnet_details}@@
+    subnet_uuid = subnet["uuid"]
+    subnet_name = subnet["name"]
+    payload = _get_route_spec(vpc_uuid, subnet_uuid, subnet_name)
+    url = _build_url(scheme="https",
+                    resource_type="/vpcs/%s/route_tables"%vpc_uuid)
+    data = requests.put(url, json=payload, 
+                        auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
+    wait_for_completion(data)
+    
 def wait_for_completion(data):
     if data.status_code in [200, 202]:
         state = data.json()['status'].get('state')
@@ -86,33 +123,12 @@ def wait_for_completion(data):
                                 data.json().get('error_detail', data.json())))
         exit(1)
     return data.json()['status']['execution_context']['task_uuid']
-    
-def _get_vlan_uuid(**params):
-    vlan_name = params["external_subnet_name"]
-    existing_subnet = @@{external_subnet_details}@@
-    for _subnet in existing_subnet:
-        if _subnet['name'] == vlan_name:
-            return _subnet['uuid']
-    _url = _build_url(scheme="https",
-                    resource_type="/subnets/list")
-    _data = requests.post(_url, json={"kind": "subnet"},
-                        auth=HTTPBasicAuth(pc_username, pc_password),
-                        verify=False)
-    _uuid = ""
-    if vlan_name in str(_data.json()):
-        for x in range(len(_data.json()['entities'])):
-            if str(_data.json()['entities'][x]['spec']['name']) == vlan_name:
-                _uuid = str(_data.json()['entities'][x]['metadata']['uuid'])
-                return _uuid
-    else:
-        print("Error ---> %s subnet not present on host"%vlan_name)
-        exit(1)
 
-def validate_params():
+def set_params():
     params = {}
     print("##### creating VPC #####")
-    vpc_details = []
     params_dict = @@{vpc_items}@@
+    ext_subnet = @@{external_subnet_details}@@
     params['name'] = params_dict['name']
     params['uuid'] = params_dict.get('uuid', "None")
     if params_dict.get("dns_servers", "None") != "None":
@@ -132,13 +148,12 @@ def validate_params():
         params["external_subnet_list"][0]["external_subnet_reference"]["kind"] = "subnet"
         params["external_subnet_list"][0]["external_subnet_reference"]["name"] = \
                                             params_dict["external_subnet_name"]
-        params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
-                                            _get_vlan_uuid(**params_dict)
+        params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = ext_subnet["uuid"]
                                             
     if params_dict.get("external_subnet_uuid", "None") != "None":
         params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
-                                                    params_dict['external_subnet_uuid']
-    vpc_details.append(create_vpc(**params))
-    print("vpc_details={}".format(vpc_details))
-
-validate_params()
+                                               params_dict['external_subnet_uuid']
+    return params
+params = set_params()
+vpc_details = create_vpc(**params)
+print("vpc_details={}".format(vpc_details))
