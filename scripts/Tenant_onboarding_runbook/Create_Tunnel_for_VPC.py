@@ -96,11 +96,11 @@ def wait_for_completion(data):
 vpc = @@{vpc_details}@@
 account = @@{account_details}@@
 overlay_subnet = @@{overlay_subnet_details}@@
-params = {"vpc_name" : vpc[0]["name"],
-          "vpc_uuid" : vpc[0]["uuid"],
+params = {"vpc_name" : vpc["name"],
+          "vpc_uuid" : vpc["uuid"],
           "account_name" : "@@{account_name}@@",
           "account_uuid" : account["uuid"],
-          "overlay_subnet_uuid" : overlay_subnet[0]["uuid"],
+          "overlay_subnet_uuid" : overlay_subnet["uuid"],
           "cluster_uuid" : "@@{cluster_uuid}@@",
           "tunnel_name" : "@@{tenant_name}@@_VPC_Tunnel"
         }
