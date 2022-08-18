@@ -107,6 +107,7 @@ def _get_default_ipconfig_spec():
 
 def create_external_subnet(**params):
     params['ipam_spec'] = _get_ipam_spec(**params)
+    cluster_details = _get_cluster_details(cluster_name=params['cluster_name'])
     payload = _get_default_spec()
     if params['uuid'] != "None":
         payload["spec"]['uuid'] = params['uuid']
@@ -114,12 +115,10 @@ def create_external_subnet(**params):
     payload["spec"]["resources"]["subnet_type"] = "VLAN"
     payload["spec"]["resources"]["vlan_id"] = params['vlan_id']
     payload["spec"]["resources"]["ip_config"] = params['ipam_spec']
-    payload["spec"]["cluster_reference"] = params.get('cluser_reference',\
-                                _get_cluster_details(cluster_name=params['cluster_name']))
+    payload["spec"]["cluster_reference"] = cluster_details
     if params['enable_nat'] == False:
-        params['virtual_switch_uuid'] = params.get('virtual_switch_uuid',\
-                _get_virtual_switch_uuid(params['virtual_switch_name']))
-        payload["spec"]["resources"]["virtual_switch_uuid"] = params['virtual_switch_uuid']
+        switch_details = _get_virtual_switch_uuid(params['virtual_switch_name'])
+        payload["spec"]["resources"]["virtual_switch_uuid"] = switch_details
     payload["spec"]["resources"]["is_external"] = True
     payload["spec"]["resources"]["enable_nat"] = params['enable_nat']
     url = _build_url(scheme="https",
@@ -185,9 +184,7 @@ def _get_vlan_id():
         print("Error while fetching subnet list :- ",data.json().get('message_list',
                                      data.json().get('error_detail', data.json())))
         exit(1)
-def validate_params():
-    params = {}
-    subnets = []
+def set_params():
     params_dict = @@{external_subnet_items}@@
     params['name'] = params_dict['name']
     params['uuid'] = params_dict.get('uuid', "None")
@@ -201,7 +198,8 @@ def validate_params():
     params['ipam']['network_prefix'] = params_dict.get('prefix', 'None')
     params['ipam']['gateway_ip'] = params_dict['gateway_ip']
     params['ip_pools'] = params_dict['ip_pools']
-    subnet = create_external_subnet(**params)
-    subnets.append(subnet)
-    print("external_subnet_details={}".format(subnets))
-validate_params()
+
+params = {}
+set_params()
+subnet = create_external_subnet(**params)
+print("external_subnet_details={}".format(subnet))
