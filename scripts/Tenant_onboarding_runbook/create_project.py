@@ -30,13 +30,29 @@ def get_role_uuid(role_name):
         print("Error :- {}".format(r.content))
         exit(1)
 
-def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uuid, vpc_uuid, project_name):
+def get_project_specs(project):
+    url = _build_url(scheme="https",
+                    resource_type="/projects_internal/{}".format(project))
+    data = requests.get(url,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)
+    if data.ok:
+        return data.json()
+    else:
+        print(data.json())
+    
+def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uuid, vpc_uuid, project_name,project_uuid):
+    project_specs = get_project_specs(project_uuid)
+    collection = "ALL"
+    if "@@{allow_collaboration}@@".lower() == "false":
+        collection = "SELF_OWNED"
+        
     return ({
     "spec": {
         "access_control_policy_list": [
             {
                 "acp": {
-                    "name": "ADMIN-ACP-@@{tenant_uuid}@@",
+                    "name": "Admin ACP-@@{calm_now}@@",
                     "resources": {
                         "role_reference": {
                             "name": "Project Admin",
@@ -60,7 +76,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                                             "left_hand_side": "PROJECT",
                                             "right_hand_side": {
                                                 "uuid_list": [
-                                                    "740ade18-94ad-459e-a607-c14f33020948"
+                                                    project_uuid
                                                 ]
                                             }
                                         }
@@ -72,7 +88,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                                                 "entity_type": "ALL"
                                             },
                                             "right_hand_side": {
-                                                "collection": "ALL"
+                                                "collection": collection
                                             }
                                         }
                                     ]
@@ -119,7 +135,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                                             "operator": "IN",
                                             "right_hand_side": {
                                                 "uuid_list": [
-                                                    "740ade18-94ad-459e-a607-c14f33020948"
+                                                    project_uuid
                                                 ]
                                             },
                                             "left_hand_side": {
@@ -213,9 +229,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                                                 "entity_type": "cluster"
                                             },
                                             "right_hand_side": {
-                                                "uuid_list": [
-                                                    "@@{cluster_uuid}@@"
-                                                ]
+                                                "uuid_list": ["@@{cluster_uuid}@@"]
                                             }
                                         }
                                     ]
@@ -227,7 +241,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                                             "left_hand_side": "PROJECT",
                                             "right_hand_side": {
                                                 "uuid_list": [
-                                                    "740ade18-94ad-459e-a607-c14f33020948"
+                                                    project_uuid
                                                 ]
                                             }
                                         }
@@ -265,7 +279,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                             ]
                         }
                     },
-                    "description": "untitledAcp-3ef331e0-fdbf-c71d-c1f9-46799dc450f2"
+                    "description": "project admin acp @@{calm_now}@@"
                 },
                 "metadata": {
                     "kind": "access_control_policy"
@@ -276,7 +290,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
         "project_detail": {
             "name": project_name,
             "resources": {
-                "external_network_list": [],
+#                "external_network_list": [],
                 "account_reference_list": [
                     {
                         "kind": "account",
@@ -300,8 +314,8 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                         "uuid": vpc_uuid
                     }
                 ],
-                "tunnel_reference_list": [],
-                "external_user_group_reference_list": [],
+#                "tunnel_reference_list": [],
+#                "external_user_group_reference_list": [],
                 "subnet_reference_list": [
                     {
                         "kind": "subnet",
@@ -315,7 +329,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                         "uuid": "@@{cluster_uuid}@@"
                     }
                 ],
-                "environment_reference_list": []
+#                "environment_reference_list": []
             },
             "description": "Tenant Onboarding Project"
         },
@@ -327,11 +341,11 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                 },
                 "user": {
                     "resources": {
-                        "identity_provider_user": {
-                            "username": user_name,
-                            "identity_provider_reference": {
+                        "directory_service_user": {
+                            "user_principal_name": user_name,
+                            "directory_service_reference": {
                                 "uuid": idp_uuid,
-                                "kind": "identity_provider"
+                                "kind": "directory_service"
                             }
                         }
                     }
@@ -341,9 +355,11 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
         ],
         "user_group_list": []
     },
-    "api_version": "3.1",
+    "api_version": project_specs["api_version"],
     "metadata": {
-        "kind": "project"
+        "kind": "project",
+        "uuid":project_uuid,
+        "spec_version":project_specs["metadata"]["spec_version"]
     }})
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
@@ -371,50 +387,57 @@ def _get_default_spec():
                 }
             }
         )
-
-def _get_group_spec():
-	return ({
-  			"api_version": "3.1.0",
-  			"metadata": {
-    			"kind": "user_group"
-  				},
- 			"spec": {
-    			"resources": {
-      				"directory_service_user_group": {
-        				"distinguished_name": ""
-      					}
-    				}
-  				}
-			})
             
+def _get_user_spec():
+    return ({
+        "api_version": "3.1.0",
+        "metadata": {
+            "kind" : "user"
+            },
+        "spec": {
+            "resources": {}
+            }
+        })
+        
 def get_user_uuid(user, **params):
-    _payload = {"entity_type": "abac_user_capability",
-                "group_member_attributes": [
-               {
-                   "attribute": "display_name"
-               },
-               {
-                   "attribute": "user_uuid"
-               },
-               {
-                   "attribute": "username"
-               }
-           ],
-           "query_name": "prism:BaseGroupModel"
-         }
-    url = _build_url(scheme="https",
-                    resource_type="/groups")
-    data = requests.post(url, json=_payload,
-                        auth=HTTPBasicAuth(pc_username, pc_password),
-                        timeout=None, verify=False)
-    if data.ok:
-        for user_data in data.json()["group_results"][0]["entity_results"]:
-            if user_data["data"][2]["values"][0]["values"][0] == user.strip():
-                return user_data["entity_id"]
-    else:
-        print("Error while fetching user details :- ",data.json())
-        exit(1)
+    payload = _get_user_spec()   
+    ad = @@{ad_details}@@
+    payload['spec']['resources']['directory_service_user'] = {}
+    payload['spec']['resources']['directory_service_user']\
+                                ['user_principal_name'] =  user.strip()
+
+    payload['spec']['resources']['directory_service_user']\
+            ['directory_service_reference'] = {}
+    payload['spec']['resources']['directory_service_user']\
+            ['directory_service_reference']['kind'] = "directory_service"
+    payload['spec']['resources']['directory_service_user']\
+                ['directory_service_reference']['uuid'] = ad["ad_uuid"]
                 
+    url = _build_url(scheme="https",resource_type="/users")
+    data = requests.post(url, json=payload,
+                        auth=HTTPBasicAuth("@@{prism_central_username}@@", 
+                                           "@@{prism_central_passwd}@@"),
+                        timeout=None, verify=False)    
+    
+    wait_for_completion(data)
+
+    if not data.ok:
+        if "DUPLICATE" in str(data.json()):
+            _url = _build_url(scheme="https",resource_type="/users/list")                        
+            _data = requests.post(_url, json={"kind":"user", "length":9999},
+                                 auth=HTTPBasicAuth("@@{prism_central_username}@@", 
+                                                    "@@{prism_central_passwd}@@"),
+                                 timeout=None, verify=False)   
+            if user in str(_data.json()):
+                for new_data in _data.json()['entities']:
+                    if new_data['status']['name'] == user:
+                        return new_data['metadata']['uuid']
+        else:
+            print("Error while Fetching user details----> ",data.json())
+            exit(1)
+    else:
+        return data.json()['metadata']['uuid']
+        
     url = _build_url(scheme="https",
                     resource_type="/idempotence_identifiers/salted")
     payload = {"name_list":[user]}
@@ -428,7 +451,38 @@ def get_user_uuid(user, **params):
     else:
         print("Error while fetching user details :- ",data.json())
         exit(1)
-
+        
+def create_empty_project(project_name):
+    payload = {
+        "api_version": "3.0",
+        "metadata": {
+            "kind": "project"
+        },
+        "spec": {
+            "project_detail": {
+                "name": project_name,
+                "resources": {}
+            },
+            "user_list": [],
+            "user_group_list": [],
+            "access_control_policy_list": []
+        }
+    }
+    
+    url = _build_url(scheme="https",resource_type="/projects_internal")
+    data = requests.post(url, json=payload,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)
+                        
+    if data.ok:
+        wait_for_completion(data)
+    else:
+        print("Failed with Error ---> ",data.json().get('message_list', 
+                                data.json().get('error_detail', data.json())))
+        exit(1)
+    
+    return data.json()["metadata"]["uuid"]
+    
 def build_project(**params):    
     vpc_details = @@{vpc_details}@@
     admin_role_uuid = get_role_uuid(ROLE_ADMIN)
@@ -461,29 +515,25 @@ def build_project(**params):
                                    
     user_details = []
     all_users = []
-    for x in range(len(params['tenant_users'])):
-        all_users.append(params['tenant_users'][x].get('admin',\
-                      params['tenant_users'][x].get('operator',\
-                      params['tenant_users'][x].get('developer',\
-                      params['tenant_users'][x].get('consumer')))))
-    for _user in all_users:
-        for user in _user:
-            user_uuid = get_user_uuid(user, **params)
-            if user_uuid != "None":
-                user_details.append({'name':user, 'uuid':user_uuid})
+    user = "@@{project_admin_user}@@".strip()
+    user_uuid = get_user_uuid(user, **params)
+    if user_uuid != "None":
+        user_details.append({'name':user, 'uuid':user_uuid})
     print("user_details={}".format(user_details))
     
-    idp_uuid = @@{idp_details}@@
+    idp_uuid = @@{ad_details}@@
     print("group_details={}".format([]))
     vpc_uuid = @@{vpc_details}@@
+    project_uuid = create_empty_project(project_name=params['name'])
     payload = get_spec(role_uuid=admin_role_uuid, 
                        user_uuid=user_details[0]["uuid"], 
                        user_name=user_details[0]["name"], 
-                       idp_uuid=idp_uuid["uuid"], 
+                       idp_uuid=idp_uuid["ad_uuid"], 
                        account_uuid=account_uuid, 
                        subnet_uuid=subnet_uuid,
                        vpc_uuid=vpc_uuid["uuid"],
-                       project_name=params['name'])
+                       project_name=params['name'],
+                       project_uuid=project_uuid)
                        
     if params.get("quotas", "None") != "None":
         payload["spec"]["project_detail"]["resources"]["resource_domain"] = {}  
@@ -499,10 +549,11 @@ def build_project(**params):
                 resources.append({"resource_type":"VCPUS", "limit":resource['vcpu']})
         payload["spec"]["project_detail"]["resources"]["resource_domain"] = {"resources": resources}
         
-    url = _build_url(scheme="https",resource_type="/projects_internal")
-    data = requests.post(url, json=payload,
+    url = _build_url(scheme="https",resource_type="/projects_internal/%s"%project_uuid)
+    data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
+    print(data.json())
     if data.ok:
         wait_for_completion(data)
     else:
