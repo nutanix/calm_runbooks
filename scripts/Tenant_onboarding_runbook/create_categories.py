@@ -2,22 +2,22 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_password = "@@{prism_central_passwd}@@"
-pc_username = "@@{prism_central_username}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
+pc_username = "@@{prism_central_username}@@".strip()
 
-tenant = "@@{tenant_uuid}@@"
+tenant = @@{UID}@@
 CategoryName = "TenantName"
-value = "@@{tenant_name}@@"
+value = "@@{tenant_name}@@".strip()
 description = "Tenant Onboarding category for %s"%value
 
 base_url = 'https://{}:9440/api/nutanix/v3/categories'.format(PC_IP)
 payload = {
             "name": CategoryName,
             "description": description,
-            "capabilities": {
-                "cardinality": 64
-            }
+#            "capabilities": {
+#                "cardinality": 64
+#            }
         }
 
 api_url = base_url + '/' + CategoryName
