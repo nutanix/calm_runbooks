@@ -2,9 +2,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_user = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_user = "@@{prism_central_username}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -33,11 +33,11 @@ def get_spec(**params):
             "ordered_availability_zone_list": [
                 {
                     "availability_zone_url": params["source_az_uuid"],
-                    "cluster_uuid": "@@{primary_cluster_uuid}@@"
+                    "cluster_uuid": "@@{primary_cluster_uuid}@@".strip()
                 },
                 {
                     "availability_zone_url": params["dest_az_uuid"],
-                    "cluster_uuid": "@@{recovery_cluster_uuid}@@"
+                    "cluster_uuid": "@@{recovery_cluster_uuid}@@".strip()
                 }
             ],
             "availability_zone_connectivity_list": [
@@ -104,16 +104,16 @@ def local_schedule(_index, **params):
             }
             
 def create_protection_policy(**params):
-    params['source_az_uuid'], params['source_cluster_uuid'] = get_account_info(params['source_az'])
-    params['dest_az_uuid'], params['dest_cluster_uuid'] = get_account_info(params['dest_az'])
+    params['source_az_uuid'] = get_account_info("Local AZ")
+    params['dest_az_uuid'] = "@@{dest_az_uuid}@@".strip()
+    
     print("source_az_uuid={}".format(params['source_az_uuid']))
-    print("dest_az_uuid={}".format(params['dest_az_uuid']))
     payload = get_spec(**params)
     if @@{local_schedule}@@:
         payload['spec']['resources']['availability_zone_connectivity_list'].append(local_schedule(_index=0))
         payload['spec']['resources']['availability_zone_connectivity_list'].append(local_schedule(_index=1))
-    if "@@{policy_schedule_time}@@" != "Immediate":
-        payload['spec']['resources']['start_time'] = "@@{policy_schedule_time}@@"
+    if "@@{policy_schedule_time}@@".strip() != "Immediate":
+        payload['spec']['resources']['start_time'] = "@@{policy_schedule_time}@@".strip()
     url = _build_url(scheme="https",resource_type="/protection_rules")
     data = requests.post(url, json=payload,
                         auth=HTTPBasicAuth(pc_user,pc_password),
@@ -177,21 +177,37 @@ def batch_call(entity_uuid):
         print("Got Error ---> ",data.json().get('message_list', 
                                 data.json().get('error_detail', data.json())))
     
-def get_account_info(account_name):
-    url = _build_url(scheme="https",resource_type="/accounts/list")
-    data = requests.post(url, json={"kind":"account", "filter":"name==%s"%account_name},
+def get_account_info(az_url):
+    url = _build_url(scheme="https",resource_type="/groups")
+    payload = {
+        "entity_type": "availability_zone_physical",
+        "grouping_attribute": "type",
+        "group_member_count": 1,
+        "group_member_attributes": [
+            {
+                "attribute": "name"
+            },
+            {
+                "attribute": "url"
+            }
+        ],
+        "query_name": "prism:BaseGroupModel"
+    }
+    
+    data = requests.post(url, json=payload,
                         auth=HTTPBasicAuth(pc_user,pc_password),
                         timeout=None, verify=False)
-    if len(data.json()['entities']) != 0:
-        cluster_uuid = data.json()['entities'][0]['status']['resources']['data']\
-                   ['cluster_account_reference_list'][0]['resources']\
-                   ['data']['cluster_uuid']
-        pc_account_uuid = data.json()['entities'][0]['status']\
-                        ['resources']['data']['pc_uuid']
-        return (pc_account_uuid, cluster_uuid)
+                        
+    if data.ok:
+        for cloud_trust in data.json()["group_results"]:
+            if cloud_trust["entity_results"][0]["data"][0]["values"][0]["values"][0] == az_url:
+                return cloud_trust["entity_results"][0]["data"][1]["values"][0]["values"][0]
+        print("%s availability zone not present on %s"%(az_url, PC_IP))
+        exit(1)
     else:
-        print("Got Error while getting account info %s"%account_name)
-        print("Please make sure account name is correct and account is active.")
+        print("Failed to retrive availability zone info of %s"%az_url)
+        print("Please make sure PC url is correct and rechable.")
+        print(data.json())
         exit(1)
 
 params_dict = @@{protection_policy_items}@@
