@@ -2,9 +2,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_user = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_user = "@@{prism_central_username}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -76,9 +76,44 @@ def create_connection(PC=None, user=None, password=None,**params):
         _PC=PC
     data = requests.post(url, json=payload,
                         auth=HTTPBasicAuth(_user,_password),
-                        timeout=None, verify=False)    
+                        timeout=None, verify=False)
     wait_for_completion(data, _PC, _user, _password)
-
+    
+    _url = _build_url(scheme="https",resource_type="/groups")
+    _payload = {
+        "entity_type": "availability_zone_physical",
+        "grouping_attribute": "type",
+        "group_member_count": 1,
+        "group_member_attributes": [
+            {
+                "attribute": "name"
+            },
+            {
+                "attribute": "url"
+            }
+        ],
+        "query_name": "prism:BaseGroupModel"}
+        
+    _data = requests.post(_url, json=_payload,
+                             auth=HTTPBasicAuth(_user,_password),
+                             timeout=None, verify=False)
+    az_uuid = ""
+    print(_data.json())
+    print(params['url'])
+    if _data.ok:
+        if params['url'] in str(_data.json()):
+            for cloud_trust in _data.json()["group_results"]:
+                if cloud_trust["entity_results"][0]["data"][0]["values"][0]["values"][0] == "PC_"+params['url']:
+                    az_uuid = cloud_trust["entity_results"][0]["data"][1]["values"][0]["values"][0]
+        else:
+            print("%s PC's availability zone not present on %s"%(params['url'], PC_IP))
+            exit(1)
+    else:
+        print("Failed to retrive Availability Zone information.")
+        print(data.json())
+        exit(1)
+    print("dest_az_uuid={}".format(az_uuid))
+    
 def add_account(PC=None, user=None, password=None, **params):
     payload = get_spec_account(**params)
     url = _build_url(scheme="https",resource_type="/accounts")
@@ -146,15 +181,3 @@ def wait_for_completion(data, PC=None, user=None, password=None):
 # Create account and connection at local PC
 params = @@{dr_account_items}@@
 create_connection(**params)
-add_account(**params)
-
-# Create account and connection at DR PC
-_params = {"name" : "Production_%s"%PC_IP.split(".")[-1],
-          "url" : PC_IP,
-          "username" : pc_user,
-          "passwd" : pc_password,
-          "sync_interval_secs" : params.get("sync_interval_secs", 3600)}
-add_account(PC=params['url'], 
-            user=params['username'],
-            password=params['passwd'],
-            **_params)
