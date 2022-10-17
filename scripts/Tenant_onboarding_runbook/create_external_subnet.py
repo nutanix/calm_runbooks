@@ -3,9 +3,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_username = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_username = "@@{prism_central_username}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -40,7 +40,7 @@ def _get_cluster_details(cluster_name):
         exit(1)
     
 def _get_virtual_switch_uuid(virtual_switch_name):
-    cluster = "@@{cluster_name}@@"
+    cluster = "@@{cluster_name}@@".strip()
     _cluster = _get_cluster_details(cluster)
     cluster_uuid = _cluster['uuid']
     payload = {"entity_type": "distributed_virtual_switch", 
@@ -125,23 +125,45 @@ def create_external_subnet(**params):
                         resource_type="/subnets")
     while True:
         data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, 
-                                            pc_password),
+                         auth=HTTPBasicAuth(pc_username,pc_password),
                          timeout=None, verify=False)
         if data.ok:
-            task_uuid = wait_for_completion(data)
-            task = {"uuid": data.json()['metadata']['uuid'],
-                    "create_subnet_task_uuid":task_uuid,
-                    "name": params['name']}
-            return task
-        elif "subnet exists with VLAN ID" in str(data.json()):
-            payload["spec"]["resources"]["vlan_id"] = params['vlan_id'] + 5
+            task_uuid = wait_for_completion(data=data, vlan_id=params['vlan_id'])
+            if task_uuid == {}:
+                _uuid = data.json()['metadata']['uuid']
+                _name = params['name']
+            else:
+                _uuid = task_uuid["uuid"]
+                _name = task_uuid["name"]
+            return {"uuid": _uuid, "name": _name}
+
+        elif "subnet exists with vlan id" in str(data.json()).lower():
+            _url = _build_url(scheme="https",resource_type="/subnets/list")
+            _data = requests.post(_url, json={"kind":"subnet"},
+                                 auth=HTTPBasicAuth(pc_username,pc_password),
+                                 verify=False)
+            if _data.ok:
+                if _data.json()['metadata']['total_matches'] > 0:
+                    for _subnet in _data.json()['entities']:
+                        if "vlan_id" not in _subnet['spec']['resources'].keys():
+                            continue
+                        if _subnet['spec']['resources']['vlan_id'] == params['vlan_id']:
+                            return {"uuid":_subnet['metadata']['uuid'], "name":_subnet["spec"]["name"]}
+                    print("Error :- No subnet found on host with VLAN ID %s"%params['vlan_id'])
+                    exit(1)
+                else:
+                    print("Error :- No subnet found on host")
+                    exit(1)
+            else:
+                print("Error while fetching external subnet details.")
+                print(data.json().get('message_list', data.json().get('error_detail', data.json())))
+                exit(1)
         else:
-            print("Got Error ---> ",data.json().get('message_list', 
+            print("Failed to create external subnet ---> ",data.json().get('message_list', 
                                     data.json().get('error_detail', data.json())))
             exit(1)
 
-def wait_for_completion(data):
+def wait_for_completion(data, vlan_id=None):
     if data.ok:
         state = data.json()['status'].get('state')
         while state == "PENDING":
@@ -154,13 +176,36 @@ def wait_for_completion(data):
                 state = 'PENDING'
                 sleep(5)                
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                if "subnet exists with vlan id" in str(responce.json()).lower():
+                    print("Another external subnet exist with sam VLAN ID, fetching details..")
+                    _url = _build_url(scheme="https",resource_type="/subnets/list")
+                    _data = requests.post(_url, json={"kind":"subnet"},
+                                 auth=HTTPBasicAuth(pc_username,pc_password),
+                                 verify=False)
+                    if _data.ok:
+                        if _data.json()['metadata']['total_matches'] > 0:
+                            for _subnet in _data.json()['entities']:
+                                if "vlan_id" not in _subnet['spec']['resources'].keys():
+                                    continue
+                                if _subnet['spec']['resources']['vlan_id'] == vlan_id:
+                                    return {'uuid':_subnet['metadata']['uuid'],"name":_subnet['spec']['name']}
+                            print("Error :- No subnet found on host with VLAN ID %s"%vlan_id)
+                            exit(1)
+                        else:
+                            print("Error :- No subnet found on host")
+                            exit(1)
+                    else:
+                        print("Error while fetching external subnet details.")
+                        print(data.json().get('message_list', data.json().get('error_detail', data.json())))
+                        exit(1)
+                else:
+                    print("Error ---> ",responce.json().get('message_list', 
                                         responce.json().get('error_detail', responce.json())))
-                state = 'FAILED'
-                exit(1)
+                    state = 'FAILED'
+                    exit(1)
             else:
                 state = "COMPLETE"
-    return data.json()['status']['execution_context']['task_uuid']
+    return {}
             
 def _get_vlan_id():
     url = _build_url(scheme="https",resource_type="/subnets/list")
