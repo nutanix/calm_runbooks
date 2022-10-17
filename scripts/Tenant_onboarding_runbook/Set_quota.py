@@ -2,9 +2,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_username = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "localhost"
+pc_username = "@@{management_pc_username}@@".strip()
+pc_password = "@@{management_pc_password}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -19,7 +19,7 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     return url
 
 def cluster_details(cluster=None):
-    cluster_name = "@@{cluster_name}@@"
+    cluster_name = "@@{cluster_name}@@".strip()
     if cluster != None:
         cluster_name = cluster
     payload = {"kind": "cluster"}
@@ -102,7 +102,41 @@ def add_quotas(account,**params):
         wait_for_completion(data) 
     else:
         print("Quota not set for project %s"%project_details['name'])
-
+        
+    enable_quota_state(account_details['uuid'], project_details['uuid'])
+        
+def enable_quota_state(account, project):
+    payload = {"spec":{
+                      "resources":{
+                                   "entities":{
+                                               "project":project},
+                      "state":"enabled"
+                      }
+                  }
+              }
+            
+    url = "https://{}:9440/api/calm/v3.0/quotas/update/state".format(PC_IP)
+    data = requests.put(url, json=payload,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)
+    wait_for_completion(data) 
+      
+    payload = {"spec":{
+                      "resources":{
+                                   "entities":{
+                                               "account":account,
+                                               "project":project},
+                      "state":"enabled"
+                      }
+                  }
+              }
+            
+    url = "https://{}:9440/api/calm/v3.0/quotas/update/state".format(PC_IP)
+    data = requests.put(url, json=payload,
+                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        timeout=None, verify=False)
+    wait_for_completion(data) 
+      
 def wait_for_completion(data):
     if data.status_code in [200, 202]:
         state = data.json()['status'].get('state')
