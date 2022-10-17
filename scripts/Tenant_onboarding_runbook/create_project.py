@@ -9,9 +9,9 @@ ROLE_DEVELOPER = "Developer"
 ROLE_CONSUMER = "Consumer"
 ROOT_OU = 'tenants'
 
-PC_IP = "@@{PC_IP}@@"
-pc_username = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "localhost"
+management_username = "@@{management_pc_username}@@".strip()
+management_password = "@@{management_pc_password}@@".strip()
 
 def get_role_uuid(role_name):
     api_url = 'https://{}:9440/api/nutanix/v3/roles/list'.format(PC_IP)
@@ -21,7 +21,7 @@ def get_role_uuid(role_name):
       'offset': 0
     }
     r = requests.post(api_url, json=payload, 
-                    auth=HTTPBasicAuth(pc_username, pc_password), 
+                    auth=HTTPBasicAuth(management_username, management_password), 
                     timeout=None, verify=False)
     result = json.loads(r.content)
     if result.get('entities', 'None') != 'None':
@@ -34,14 +34,14 @@ def get_project_specs(project):
     url = _build_url(scheme="https",
                     resource_type="/projects_internal/{}".format(project))
     data = requests.get(url,
-                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
     if data.ok:
         return data.json()
     else:
         print(data.json())
     
-def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uuid, vpc_uuid, project_name,project_uuid):
+def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc_uuid,project_name,project_uuid,subnet_name):
     project_specs = get_project_specs(project_uuid)
     collection = "ALL"
     if "@@{allow_collaboration}@@".lower() == "false":
@@ -290,7 +290,12 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
         "project_detail": {
             "name": project_name,
             "resources": {
-#                "external_network_list": [],
+                "external_network_list": [
+                    {
+                        "name": subnet_name,
+                        "uuid": subnet_uuid
+                    }
+                    ],
                 "account_reference_list": [
                     {
                         "kind": "account",
@@ -314,13 +319,10 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                         "uuid": vpc_uuid
                     }
                 ],
-#                "tunnel_reference_list": [],
-#                "external_user_group_reference_list": [],
+                "tunnel_reference_list": [],
+                "external_user_group_reference_list": [],
                 "subnet_reference_list": [
-                    {
-                        "kind": "subnet",
-                        "uuid": subnet_uuid
-                    }
+
                 ],
                 "resource_domain": {},
                 "cluster_reference_list": [
@@ -329,7 +331,7 @@ def get_spec(role_uuid, user_uuid, user_name, idp_uuid, account_uuid, subnet_uui
                         "uuid": "@@{cluster_uuid}@@"
                     }
                 ],
-#                "environment_reference_list": []
+                "environment_reference_list": []
             },
             "description": "Tenant Onboarding Project"
         },
@@ -415,8 +417,8 @@ def get_user_uuid(user, **params):
                 
     url = _build_url(scheme="https",resource_type="/users")
     data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth("@@{prism_central_username}@@", 
-                                           "@@{prism_central_passwd}@@"),
+                        auth=HTTPBasicAuth(management_username, 
+                                           management_password),
                         timeout=None, verify=False)    
     
     wait_for_completion(data)
@@ -425,8 +427,8 @@ def get_user_uuid(user, **params):
         if "DUPLICATE" in str(data.json()):
             _url = _build_url(scheme="https",resource_type="/users/list")                        
             _data = requests.post(_url, json={"kind":"user", "length":9999},
-                                 auth=HTTPBasicAuth("@@{prism_central_username}@@", 
-                                                    "@@{prism_central_passwd}@@"),
+                                 auth=HTTPBasicAuth(management_username, 
+                                                    management_password),
                                  timeout=None, verify=False)   
             if user in str(_data.json()):
                 for new_data in _data.json()['entities']:
@@ -442,7 +444,7 @@ def get_user_uuid(user, **params):
                     resource_type="/idempotence_identifiers/salted")
     payload = {"name_list":[user]}
     data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)                   
     if data.ok:
         _uuid = data.json()["name_uuid_list"][0][user]
@@ -471,7 +473,7 @@ def create_empty_project(project_name):
     
     url = _build_url(scheme="https",resource_type="/projects_internal")
     data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
                         
     if data.ok:
@@ -502,7 +504,7 @@ def build_project(**params):
     if params.get('accounts', 'None') != "None":
         url = _build_url(scheme="https",resource_type="/accounts/list")
         data = requests.post(url, json={"kind":"account", "filter":"name==%s"%params['accounts']},
-                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)       
         if params['accounts'] in str(data.json()):
             for new_data in data.json()['entities']:
@@ -533,7 +535,8 @@ def build_project(**params):
                        subnet_uuid=subnet_uuid,
                        vpc_uuid=vpc_uuid["uuid"],
                        project_name=params['name'],
-                       project_uuid=project_uuid)
+                       project_uuid=project_uuid,
+                       subnet_name=subnet_name)
                        
     if params.get("quotas", "None") != "None":
         payload["spec"]["project_detail"]["resources"]["resource_domain"] = {}  
@@ -551,9 +554,8 @@ def build_project(**params):
         
     url = _build_url(scheme="https",resource_type="/projects_internal/%s"%project_uuid)
     data = requests.put(url, json=payload,
-                        auth=HTTPBasicAuth(pc_username, pc_password),
+                        auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
-    print(data.json())
     if data.ok:
         wait_for_completion(data)
     else:
@@ -582,7 +584,7 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth("admin","Nutanix.123"), 
+            responce = requests.get(url, auth=HTTPBasicAuth(management_username,management_password), 
                                     verify=False)                      
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
