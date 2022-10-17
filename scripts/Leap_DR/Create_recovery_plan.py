@@ -2,11 +2,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_user = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
-source_az_uuid = "@@{source_az_uuid}@@"
-dest_az_uuid = "@@{dest_az_uuid}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_user = "@@{prism_central_username}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
+source_az_uuid = "@@{source_az_uuid}@@".strip()
+dest_az_uuid = "@@{dest_az_uuid}@@".strip()
 protection_policy = @@{protection_policy_items}@@
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
@@ -31,7 +31,7 @@ def _get_stage_spec(vm_category):
     if data.ok:
         _uuid = data.json()['uuid_list'][0]
     else:
-        print("Failed to generate account uuid, Please try again ...")
+        print("Failed to generate idemotence uuid, Please try again ...")
         exit(1)
         
     return ({
@@ -82,48 +82,20 @@ def get_spec(**params):
                         "availability_zone_network_mapping_list": [
                             {
                                 "recovery_network": {
-                                    "name": params['recovery_network_prod']['name'],
-                                    "subnet_list": [
-                                        {
-                                            "external_connectivity_state": "DISABLED",
-                                            "gateway_ip": params['recovery_network_prod']['gateway'],
-                                            "prefix_length": params['recovery_network_prod']['prifix']
-                                        }
-                                    ]
+                                    "name": params['recovery_network_prod']['name']
                                 },
                                 "availability_zone_url": source_az_uuid,
                                 "test_network": {
-                                    "name": params['recovery_network_test']['name'],
-                                    "subnet_list": [
-                                        {
-                                            "external_connectivity_state": "DISABLED",
-                                            "gateway_ip": params['recovery_network_test']['gateway'],
-                                            "prefix_length": params['recovery_network_test']['prifix']
-                                        }
-                                    ]
+                                    "name": params['recovery_network_test']['name']
                                 }
                             },
                             {
                                 "recovery_network": {
-                                    "name": params['dr_network_prod']['name'],
-                                    "subnet_list": [
-                                        {
-                                            "external_connectivity_state": "DISABLED",
-                                            "gateway_ip": params['dr_network_prod']['gateway'],
-                                            "prefix_length": params['dr_network_prod']['prifix']
-                                        }
-                                    ]
+                                    "name": params['dr_network_prod']['name']
                                 },
                                 "availability_zone_url": dest_az_uuid,
                                 "test_network": {
-                                    "name": params['dr_network_test']['name'],
-                                    "subnet_list": [
-                                        {
-                                            "external_connectivity_state": "DISABLED",
-                                            "gateway_ip": params['dr_network_test']['gateway'],
-                                            "prefix_length": params['dr_network_test']['prifix']
-                                        }
-                                    ]
+                                    "name": params['dr_network_test']['name']
                                 }
                             }
                         ]
@@ -153,6 +125,13 @@ def get_static_map_spec(IP, vm):
           }
        ]})
   
+def subnet_list_spec(network, **params):
+    return [{
+             "external_connectivity_state": "DISABLED",
+              "gateway_ip": params[network]['gateway'],
+              "prefix_length": int(params[network]['prifix'])
+             }]
+  
 def create_recovery_plan(**params):
     payload = get_spec(**params)
     recovery_prod = []
@@ -161,10 +140,10 @@ def create_recovery_plan(**params):
     test_dr = []
     if @@{static_ip_mapping}@@:
         for x,_vm in enumerate(params["vm_name"].split(",")):
-            recovery_prod.append(get_static_map_spec("@@{primary_network_prod_static_ip}@@".split(",")[x], _vm.strip()))
-            recovery_dr.append(get_static_map_spec("@@{dr_network_prod_static_ip}@@".split(",")[x], _vm.strip()))
-            test_prod.append(get_static_map_spec("@@{primary_network_test_static_ip}@@".split(",")[x], _vm.strip()))
-            test_dr.append(get_static_map_spec("@@{dr_network_test_static_ip}@@".split(",")[x], _vm.strip()))
+            recovery_prod.append(get_static_map_spec("@@{primary_network_prod_static_ip}@@".strip().split(",")[x], _vm.strip()))
+            recovery_dr.append(get_static_map_spec("@@{dr_network_prod_static_ip}@@".strip().split(",")[x], _vm.strip()))
+            test_prod.append(get_static_map_spec("@@{primary_network_test_static_ip}@@".strip().split(",")[x], _vm.strip()))
+            test_dr.append(get_static_map_spec("@@{dr_network_test_static_ip}@@".strip().split(",")[x], _vm.strip()))
             
         payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
                ["availability_zone_network_mapping_list"][0]\
@@ -178,6 +157,30 @@ def create_recovery_plan(**params):
         payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
                ["availability_zone_network_mapping_list"][1]\
                ["test_ip_assignment_list"] = test_dr
+        
+    if params["recovery_network_prod"]["gateway"] != "NA":
+        _spec = subnet_list_spec(network="recovery_network_prod", **params)
+        payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
+            ["availability_zone_network_mapping_list"][0]["recovery_network"]\
+            ["subnet_list"] = _spec
+        
+    if params["recovery_network_test"]["gateway"] != "NA":
+        _spec = subnet_list_spec(network="recovery_network_test", **params)
+        payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
+            ["availability_zone_network_mapping_list"][0]["test_network"]\
+            ["subnet_list"] = _spec
+        
+    if params["dr_network_prod"]["gateway"] != "NA":
+        _spec = subnet_list_spec(network="dr_network_prod", **params)
+        payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
+            ["availability_zone_network_mapping_list"][1]["recovery_network"]\
+            ["subnet_list"] = _spec
+        
+    if params["dr_network_test"]["gateway"] != "NA":
+        _spec = subnet_list_spec(network="dr_network_test", **params)
+        payload["spec"]["resources"]["parameters"]["network_mapping_list"][0]\
+            ["availability_zone_network_mapping_list"][1]["test_network"]\
+            ["subnet_list"] = _spec
         
     url = _build_url(scheme="https",resource_type="/recovery_plans")
     data = requests.post(url, json=payload,
@@ -238,5 +241,5 @@ def get_vm_uuid(vm):
         exit(1)
         
 params_dict = @@{recovery_plan_items}@@
-params_dict["vm_name"] = "@@{vm_name}@@"
+params_dict["vm_name"] = "@@{vm_name}@@".strip()
 create_recovery_plan(**params_dict)
