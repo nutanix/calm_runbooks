@@ -2,9 +2,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_user = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "@@{PC_IP}@@".strip()
+pc_user = "@@{prism_central_username}@@".strip()
+pc_password = "@@{prism_central_passwd}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
