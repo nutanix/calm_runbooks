@@ -3,9 +3,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@"
-pc_user = "@@{prism_central_username}@@"
-pc_password = "@@{prism_central_passwd}@@"
+PC_IP = "localhost"
+pc_user = "@@{management_pc_username}@@".strip()
+pc_password = "@@{management_pc_password}@@".strip()
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -19,6 +19,21 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
+def get_account_uuid():
+    account = "@@{account_name}@@".strip()
+    url = _build_url(scheme="https",resource_type="/accounts/list")
+    data = requests.post(url, json={"kind":"account", "filter":"name==%s"%account},
+                        auth=HTTPBasicAuth(pc_user, pc_password),
+                        timeout=None, verify=False)       
+    if account in str(data.json()):
+        for new_data in data.json()['entities']:
+           if new_data['metadata']['name'] == account: 
+                account_uuid = new_data['metadata']['uuid']
+                return account_uuid
+    else:
+        print("Error : %s account not present on %s"%(account,PC_IP))
+        exit(1)    
+            
 def get_spec(**params):
     url = _build_url(scheme="https",
                     resource_type="/idempotence_identifiers")
@@ -30,6 +45,9 @@ def get_spec(**params):
     else:
         print("Error :- Failed to generate Idempotence UUID.")
         exit(1)
+        
+    #account_uuid = get_account_uuid()
+    
     return (
     {"api_version": "3.1.0",
     "metadata": {
@@ -94,12 +112,12 @@ def wait_for_completion(data):
         exit(1)
 
 vpc = @@{vpc_details}@@
-account = @@{account_details}@@
+#account = @@{account_details}@@
 overlay_subnet = @@{overlay_subnet_details}@@
 params = {"vpc_name" : vpc["name"],
           "vpc_uuid" : vpc["uuid"],
-          "account_name" : "@@{account_name}@@",
-          "account_uuid" : account["uuid"],
+          "account_name" : "@@{account_name}@@".strip(),
+          "account_uuid" : get_account_uuid(),
           "overlay_subnet_uuid" : overlay_subnet["uuid"],
           "cluster_uuid" : "@@{cluster_uuid}@@",
           "tunnel_name" : "@@{tenant_name}@@_VPC_Tunnel"
