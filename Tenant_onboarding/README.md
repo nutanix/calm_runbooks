@@ -423,7 +423,7 @@
   ```
   #### **Note:** For Linux script should be ansible base64 encoded and for windows script should be in XML format.
 
-## **`Environment Credential Username (Optional)`**   (Required)-</span>
+## **`Environment Credential Username (Optional)`**
 
   #### **Type:** string
   <details>
