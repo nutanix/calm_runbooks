@@ -4,7 +4,7 @@
   #### **Type:** string
   
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
  This variable represents the IP address or hostname of the Prism Central instance that will be used for the deployment. It is required for any operations that interact with Prism Central using API or CLI.
   
   </details>
@@ -19,7 +19,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the username used to authenticate with the Managementt Prism Central management interface.
   </details>
 
@@ -33,7 +33,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the password used to authenticate with Prism Central.
   </details>
 
@@ -47,7 +47,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the Name of the tenant. This ensures that all subsequent resources such as subnets, VPCs, projects, categories, and VPC tunnels are created under the correct tenant.
   </details>
 
@@ -63,7 +63,7 @@
   #### **Type:** string
 
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable is used to specify the cleanup process for stale or existing resources such as project, VPC and tunnels, Subnets of "Tenant Name" as prefix.
   </details>
 
@@ -76,7 +76,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable specify the IP address of the Prism Central instance that should be used to onboard a tenant on the Workload Prism Central instance.
   </details>
 
@@ -89,7 +89,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the Name of the username used to authenticate with the Workload Prism Central management interface 
   </details>
 
@@ -103,7 +103,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the password used to authenticate with the Workload Prism Central management interface 
   </details>
 
@@ -117,7 +117,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the URL address to the directory.
   </details>
 
@@ -131,7 +131,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the domain name in DNS format.
   </details>
 
@@ -144,7 +144,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the username used to authenticate with the Active Directory service.
   </details>
 
@@ -158,7 +158,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the password used to authenticate with the Active Directory service. 
   </details>
 
@@ -172,7 +172,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   A project admin of Nutanix who manages cloud objects belonging to a specific project. These cloud objects can include roles, virtual machines (VMs), applications, and marketplace items that are associated with the project.
   </details>
 
@@ -186,7 +186,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the Name of the Cluster.
   </details>
 
@@ -200,7 +200,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The name of the virtual switch.
   </details>
 
@@ -213,7 +213,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The VLAN ID to be used for the virtual switch.
   </details>
 
@@ -226,7 +226,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the External Subnet IP with Prefix
   </details>
 
@@ -239,7 +239,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The IP address range for the external subnets.
   </details>
 
@@ -252,7 +252,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The gateway IP address for the external subnets.
   </details>
 
@@ -265,7 +265,7 @@
 
   #### **Type:** Boolean
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable use to enable/disable NAT.
   </details>
 
@@ -278,7 +278,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the Overlay Subnet IP address with network prefix.
   </details>
 
@@ -291,7 +291,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The gateway IP address for the overlay subnets.
   </details>
 
@@ -304,7 +304,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The name of Calm account.
   </details>
 
@@ -317,7 +317,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The Maximum amount of vCPUs that can be consumed by a project.
   </details>
 
@@ -330,7 +330,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The Maximum amount of Memory that can be consumed by a project.
   </details>
 
@@ -343,7 +343,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The Maximum amount of storage that can be consumed by a project.
   </details>
 
@@ -357,7 +357,7 @@
 
   #### **Type:** Boolean
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The Allow collaboration flag .
   </details>
 
@@ -370,7 +370,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This option decides creating default Environment for project.
   </details>
 
@@ -383,7 +383,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   Operating System Type.
   </details>
 
@@ -397,7 +397,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   The Name of Image which present on Prism Central or cluster.
   </details>
 
@@ -412,7 +412,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   script that needs executed when a new virtual machine is deployed .
   </details>
 
@@ -427,7 +427,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents the username used to authenticate project enviornment resources.
   </details>
 
@@ -440,7 +440,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   Authentication type ,could be SSH key-based or password .
   </details>
 
@@ -453,7 +453,7 @@
 
   #### **Type:** string
   <details>
-  <summary>Description</summary>
+  <summary><b>Description</b></summary>
   This variable represents password/key used to authenticate project enviornment resources.
   </details>
 
