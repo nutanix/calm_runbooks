@@ -1,37 +1,434 @@
-**Input Variables information.**
-| Variable_Display_Name    | Variable_Actual_Name        | Type       | Description |
-| :---------------------  | :-------------------------- | :--------- | :---------- |
-| Protection Policy Name | protection_policy_name  | Mandatory  | Name of protection policy.  |
-| Recovery Plan Name  | recovery_plan_name  | Mandatory  | Name of Recovery plan.  |
-| Custom RPO Interval for Replication in Hours  | custom_rpo_interval_replication  | Mandatory  | Replication time frequencey to replicate VM snapshots from source to destination. Default Value is 1.   |
-| Local Schedule  | local_schedule  | Mandatory  | Local RPO schedule to keep snapshots of VM locally.  |
-| Custom RPO Interval for Local Snapshot in Hours  | custom_rpo_interval_local  | Mandatory  | Default Value is 1, Should be >= 1 for "Local Schedule = True".  |
-| Number of Snapshot Retention   | number_of_snapshot_retention  | Mandatory  | How many snapshots should be retained. It will retain number of latest snapshots.  |
-| Start Protection After Mentioned Time From Now  | policy_schedule_time  | Mandatory  | Can schedule policy / start protecting VMs after certain time provided.  |
-| Primary Account Name  | primary_account_name  | Mandatory  | Name of Calm Account at Production PC. I.E. :- NTNX_LOCAL_AZ.  |
-| Primary Account Cluster Name  | primary_account_cluster  | Mandatory  | Cluster name for policy and recovery plan schedule. This cluster should be present in provided Calm Account.  |
-| DR Account Name  | dr_account_name  | Mandatory  | This Runbook will create Calm Account of DR PC on production PC with this provided name.  |
-| DR Account Cluster Name  | dr_account_cluster  | Mandatory  | Cluster name for policy and recovery plan schedule. This cluster should be present at DR PC.  |
-| DR PC IP  | dr_account_url  | Mandatory  | DR Prism Central IP address.  |
-| DR PC Username  | dr_account_username  | Mandatory  | DR Prism Central username.  |
-| DR PC Password  | dr_account_password  | Mandatory  | DR Prism Central Password.  |
-| VM Category for Protection Policy and Recovery Plan  | vm_category  | Mandatory  | It will protect VMs depending upon categories. You will need to provide category names in json format.  |
-| Recovery Plan Network Type  | recovery_network_type  | Mandatory  | Need to choose from two type : stretched, non-stretched.  |
-| Stage Delay [ In Seconds ]  | stage_delay  | Mandatory  | Delay between stages / boot order for recovery plan.  |
-| Enable Boot Script   | enable_boot_script  | Mandatory  | User can provide boot script to each VM. Whenever recovery plan executes this boot script will run on those VMs which have boot scripts available on below path :- for Linux - production --> /usr/local/sbin/production_vm_recovery   Linux - Test --> /usr/local/sbin/test_vm_recovery,  and for Windows - Production --> (Relative to Nutanix directory in Program Files)/scripts/production/vm_recovery.bat Windows - Test --> (Relative to Nutanix directory in Program Files)/scripts/test/vm_recovery.bat  |
-| Primary Network Name - Production Subnet  | primary_network_prod_name  | Mandatory  | Primary subnet name at production PC for recovery plan.  |
-| Primary Network Gateway IP with Prefix - Production  | primary_network_prod  | Mandatory  | Gateway IP with network prefix of "Primary Network Name - Production Subnet" for recovery plan.  |
-| Primary Network Name - Test Subnet  | primary_network_test_name  | Mandatory  | Test subnet name at production PC for recovery plan.  |
-| Primary Network Gateway IP with Prefix - Test Subnet  | primary_network_test  | Mandatory  | Gateway IP with network prefix of "Primary Network Name - Test Subnet" for recovery plan.  |
-| DR Network Name - Production Subnet  | dr_network_prod_name  | Mandatory  | Primary subnet name at DR PC for recovery plan. VM will be recoverd at DR site on this network for actual disaster.  |
-| Recovery Network Gateway IP with Prefix - Production Subnet  | dr_network_prod  | Mandatory  | Gateway IP with network prefix of "Recovery Network Name - Production Subnet" for recovery plan.  |
-| DR Network Name - Test Subnet  | dr_network_test_name  | Mandatory  | Test subnet name at DR PC for recovery plan. VM will be recoverd at DR site on this network while testing disaster.  |
-| Recovery Network Gateway IP with Prefix - Test Subnet  | dr_network_test  | Mandatory  | Gateway IP with network prefix of "Recovery Network Name - Test Subnet" for recovery plan.  |
-| Enable Static IP Mapping   | static_ip_mapping  | Mandatory  | User can assign static IP's to VMs at production / Recovery networks. If user need to provide static IP mapping to any of the VM choose True.  |
-| Primary Network Prod Static IP [ Should be present VM IP ]  | primary_network_prod_static_ip | Mandatory  | Default Value is "NA". User Need to provide Current IP of VM at Production site for Number of VM's in  "VM Name" qama separated. IE. :- 10.1.1.3, 10.1.1.6. First IP will gets map to first VM1 and second IP will get maps to VM2 and likewise.  |
-| VM Name Primary Network Test Static IP  | vm_name primary_network_test_static_ip | Mandatory  | Default Value is "NA". User Can provide multiple VM Names qama separated. IE. :- VM1, VM2. Also user needs to provide Number of static IP's of VM. Default Value is "NA". User Need to provide test IP at Production site for Number of VM's in  "VM Name" qama separated. IE. :- 10.1.1.3, 10.1.1.6. First IP will gets map to first VM1 and second IP will get maps to VM2 and likewise.  |
-| DR Network Prod Static IP  | dr_network_prod_static_ip  | Mandatory  | Default Value is "NA". User Need to provide DR Production Network IP  for Number of VM's in  "VM Name" qama separated. IE. :- 10.1.1.3, 10.1.1.6. First IP will gets map to first VM1 and second IP will get maps to VM2 and likewise.  |
-| DR Network Test Static IP  | dr_network_test_static_ip  | Mandatory  | Default Value is "NA". User Need to provide DR Test Network IP  for Number of VM's in  "VM Name" qama separated. IE. :- 10.1.1.3, 10.1.1.6. First IP will gets map to first VM1 and second IP will get maps to VM2 and likewise.  |
-| PC IP  | PC_IP  | Mandatory  | Production Prism Central IP address.  |
-| Prism Central Password  | prism_central_passwd  | Mandatory  | Production Prism Central Password.  |
-| Prism Central UserName  | prism_central_username  | Mandatory  | Production Prism Central Username.  |
+# Runbook Variables
+## **`Protection Policy Name (Required)`** 
+
+  <details>
+  <summary><b>Description</b></summary>
+  The name of a protection policy.
+  A protection policy is the central mechanism for controlling management of backup storage space, based on pre-defined recovery window goals.
+  </details>
+  
+  
+  ### **Type:** _String_ 
+
+
+  ### **Example:**
+
+  ```
+  policy123
+  ```
+
+## **`Recovery Plan Name (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The name of a Recovery plan.
+  A recovery plan is a set of procedures and guidelines that outline the steps to be taken to restore a system or data to its normal operational state in the event of a disaster or disruption. In the context of backup and restore, a recovery plan is developed to ensure that data can be recovered and restored in a timely and efficient manner following a data loss event.
+  </details>
+
+  ### **Type:** _String_
+
+  #### **Example:**
+
+  ```
+  Recoveryplan123
+  ```
+
+## **`Custom RPO Interval for Replication in Hours (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  Replication time frequencey to replicate VM snapshots from source to destination. Default Value is 1hr.
+  The RPO is a measure of the amount of data that can be lost in the event of a disaster or disruption. For example, an RPO of 1 hour means that data loss can be tolerated up to 1 hour before the next backup or replication point.
+  </details>
+
+  ### **Type:** _Integer_
+
+  ### **Example:**
+
+  ```
+  4
+  ```
+
+## **`Local Schedule (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents Local RPO schedule to keep snapshots of VM locally.
+  </details>
+
+  ### **Type:** _String_
+
+
+  ### **Example:**
+
+  ```
+  True
+  ```
+
+## **`Custom RPO Interval for Local Snapshot in Hours (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents RPO interval.
+  </details>
+
+  ### **Type:** _Integer_
+
+  ### **Example:**
+  ```
+  10
+  ```
+  ### **Note:** Default Value is 1, Should be >= 1 when Local Schedule is enabled
+
+## **`Retention on Primary and Remote (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the maximum of Number of snapshots can keep in system.
+  The maximum number of snapshots that can be retained for a specific backup or replication job. A snapshot is a point-in-time copy of data that captures the state of the system or application at a particular moment. Snapshots are commonly used for data protection and disaster recovery purposes.
+  </details>
+
+  ### **Type:** _Integer_
+
+  ### **Example:**
+  ```
+  5
+  ```
+
+## **`Protection Start Time (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents start protecting VMs after certain time provided.
+  </details>
+
+  #### **Type:** _String_
+
+  #### **Example:**
+
+  ```
+  Immediate 
+  or 
+  <xx>h:<yy>m (13:10)
+  ```
+
+## **`Primary Account Cluster Name (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents Production Calm Account Name. 
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+
+  ```
+  PHX-POC092
+  ```
+
+## **`Primary PC IP (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the Primary prism central IP.
+  </details>
+
+  #### **Type:** _String_
+
+  #### **Example:**
+
+  ```
+  10.10.10.40
+  ```
+
+## **`Primary PC Username (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents primary Prism central username.
+  </details>
+
+  #### **Type:** _String_
+
+  #### **Example:**
+  ```
+  admin
+  ```
+
+## **`Primary PC Password (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the password used to authenticate with Primary prism central.
+  </details>
+
+  #### **Type:** _String_
+
+  #### **Example:**
+
+  ```
+  nutanix/4u
+  ```
+
+## **`DR Account Cluster Name (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents Cluster name whre VMs going to recovered. This cluster should be present in provided Calm Account.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+
+  ```
+  PHX-POC100
+  ```
+
+## **`DR PC IP (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+    This variable represents secondary prism central IP.
+  </details>
+
+  ### **Type:** _String_
+
+
+  ### **Example:**
+
+  ```
+  10.20.30.40
+  ```
+
+## **`DR PC Username (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the username of secondary prism central.
+  </details>
+  
+  ### **Type:** _String_
+
+  ### **Example:**
+
+  ```
+  admin
+  ```
+
+## **`DR PC Password (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the password of secondary prism central.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  nutanix/4u
+  ```
+
+## **`VM Category for Protection Policy and Recovery Plan (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents categories to which the vms got tagged.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  {"TenantName": "Tmp"}
+  ```
+
+## **`Recovery Plan Network Type (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents the recovery plan network type.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  stretched 
+  or 
+  non-stretched
+  ```
+
+#### **`Stage Delay [ In Seconds ] (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The variable represents the delay between stages / boot order for recovery plan.
+  </details>
+  
+  ### **Type:** _Integer_
+
+
+  ### **Example:**
+  ```
+  10
+  ```
+
+## **`Enable Boot Script (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The variable represents whether enable boot script or not .
+  User can provide boot script to each VM. Whenever recovery plan executes this boot script will run on those VMs which have boot scripts available on below path :- for Linux - production --> /usr/local/sbin/production_vm_recovery Linux - Test --> /usr/local/sbin/test_vm_recovery, and for Windows - Production --> (Relative to Nutanix directory in Program Files)/scripts/production/vm_recovery.bat Windows - Test --> (Relative to Nutanix directory in Program Files)/scripts/test/vm_recovery.bat
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  True
+  ```
+
+## **`Primary Network Name - Production Subnet (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents to production Primary subnet network name.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  vlan10
+  ```
+
+## **`Primary Network Name - Test Subnet (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents to production test subnet network name.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  vlan11
+  ```
+
+## **`DR Network Name - Production Subnet (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents to Secondary side Primary subnet network name.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  vlandr10
+  ```
+
+## **`DR Network Name - Test Subnet (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents to Secondary side test subnet network name.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  vlandr11
+  ```
+
+## **`Enable Static IP Mapping (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The Variable represnts enabling static IP mapping or not.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  True
+  ```
+
+## **`VM Name (Optional)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The varibles represents vms names for which static ip mapping should be done after recovery.
+  </details>
+  
+  ### **Type:** _string_
+
+  ### **Example:**
+  ```
+  vm1,vm2
+  ```
+
+## **`Primary Network Prod Static IP (Optional)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The variable represents static ips.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+
+  ```
+  10.10.10.20,10.20.20.40
+  ```
+
+## **`Primary Network Test Static IP (Optional)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  The variable represents test network static Ips.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  10.10.10.20,10.20.20.40
+  ```
+
+## **`DR Network Prod Static IP (Optional)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represnts DR network static IPs.
+  </details>
+
+  ### **Type:** _String_
+
+  #### **Example:**
+  ```
+  10.10.10.20,10.20.20.40
+  ```
+
+## **`DR Network Test Static IP (Optional)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable represents test static IPs.
+  </details>
+
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  10.10.10.20,10.20.20.40
+  ```
+
