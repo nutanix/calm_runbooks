@@ -8,7 +8,7 @@
   </details>
   
   
-  ### **Type:** _string_ 
+  ### **Type:** _String_ 
 
 
   ### **Example:**
@@ -24,7 +24,7 @@
   This variable represents the username used to authenticate with the Managementt Prism Central management interface.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   #### **Example:**
 
@@ -39,7 +39,7 @@
   This variable represents the password used to authenticate with Prism Central.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
   ### **Example:**
 
   ```
@@ -53,7 +53,7 @@
   This variable represents the Name of the tenant. This ensures that all subsequent resources such as subnets, VPCs, projects, categories, and VPC tunnels are created under the correct tenant.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
 
   ### **Example:**
@@ -63,14 +63,14 @@
   ```
   #### **Note:** All resources such as subnets,project,VPC etc.. are created under this teant using runbook will use tenant name as prefix while creating.
 
-## **`Delete Existing setup (Optional)`**
+## **`Delete Existing setup (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   This variable is used to specify the cleanup process for stale or existing resources such as project, VPC and tunnels, Subnets of "Tenant Name" as prefix.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -84,7 +84,7 @@
   This variable specify the IP address of the Prism Central instance that should be used to onboard a tenant on the Workload Prism Central instance.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
   ### **Example:**
   ```
   Workload PC IP = 172.16.10.1
@@ -97,7 +97,7 @@
   This variable represents the Name of the username used to authenticate with the Workload Prism Central management interface 
   </details>
 
-  #### **Type:** _string_
+  #### **Type:** _String_
 
   #### **Example:**
 
@@ -112,7 +112,7 @@
   This variable represents the password used to authenticate with the Workload Prism Central management interface 
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
 
@@ -127,7 +127,7 @@
   This variable represents the URL address to the directory.
   </details>
 
-  #### **Type:** _string_
+  #### **Type:** _String_
 
   #### **Example:**
 
@@ -142,7 +142,7 @@
   This variable represents the domain name in DNS format.
   </details>
 
-  #### **Type:** _string_
+  #### **Type:** _String_
 
   #### **Example:**
   ```
@@ -156,7 +156,7 @@
   This variable represents the username used to authenticate with the Active Directory service.
   </details>
 
-  #### **Type:** _string_
+  #### **Type:** _String_
 
   #### **Example:**
 
@@ -171,7 +171,7 @@
   This variable represents the password used to authenticate with the Active Directory service. 
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
 
@@ -186,7 +186,7 @@
   A project admin of Nutanix who manages cloud objects belonging to a specific project. These cloud objects can include roles, virtual machines (VMs), applications, and marketplace items that are associated with the project.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
 
   ### **Example:**
@@ -202,7 +202,7 @@
   This variable represents the Name of the Cluster.
   </details>
   
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
 
@@ -217,7 +217,7 @@
   The name of the virtual switch.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -231,7 +231,7 @@
   The VLAN ID to be used for the virtual switch.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _Integer_
 
   ### **Example:**
   ```
@@ -245,7 +245,7 @@
   This variable represents the External Subnet IP with Prefix
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -259,7 +259,7 @@
   The IP address range for the external subnets.
   </details>
   
-  ### **Type:** _string_
+  ### **Type:** _String_
 
 
   ### **Example:**
@@ -274,7 +274,7 @@
   The gateway IP address for the external subnets.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -288,7 +288,7 @@
   This variable use to enable/disable NAT.
   </details>
 
-  ### **Type:** _Boolean_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -302,7 +302,7 @@
   This variable represents the Overlay Subnet IP address with network prefix.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -316,7 +316,7 @@
   The gateway IP address for the overlay subnets.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -330,7 +330,7 @@
   The name of Calm account.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -344,7 +344,7 @@
   The Maximum amount of vCPUs that can be consumed by a project.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _Integer_
 
   ### **Example:**
   ```
@@ -358,7 +358,7 @@
   The Maximum amount of Memory that can be consumed by a project.
   </details>
   
-  ### **Type:** _string_
+  ### **Type:** _Integer_
 
   ### **Example:**
   ```
@@ -372,7 +372,7 @@
   The Maximum amount of storage that can be consumed by a project.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _Integer_
 
   ### **Example:**
 
@@ -387,7 +387,7 @@
   The Allow collaboration flag .
   </details>
 
-  ### **Type:** _Boolean_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -401,21 +401,21 @@
   This option decides creating default Environment for project.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   #### **Example:**
   ```
   Yes
   ```
 
-## **`Environment operating system (Optional)`**
+## **`Environment operating system (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   Operating System Type.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
@@ -423,14 +423,14 @@
   ```
   #### **Note:** if Create Project Environment with Default Values is selected as "Yes" user need to select proper environment operating system as mandatory.
 
-## **`Image Name (Optional)`**
+## **`Image Name (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   The Name of Image which present on Prism Central or cluster.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
 
@@ -446,7 +446,7 @@
   script that needs executed when a new virtual machine is deployed .
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _Multi Line String_
 
   ### **Example:**
 
@@ -455,42 +455,42 @@
   ```
   #### **Note:** For Linux script should be ansible base64 encoded and for windows script should be in XML format.
 
-## **`Environment Credential Username (Optional)`**
+## **`Environment Credential Username (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   This variable represents the username used to authenticate project enviornment resources.
   </details>
 
-  ### **Type:** string
+  ### **Type:** _String_
 
   ### **Example:**
   ```
   root
   ```
 
-## **`Credential Type (Optional)`**
+## **`Credential Type (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   Authentication type ,could be SSH key-based or password .
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
   KEY
   ```
 
-## **`Password Or Key (Optional)`**
+## **`Password Or Key (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
   This variable represents password/key used to authenticate project enviornment resources.
   </details>
 
-  ### **Type:** _String_
+  ### **Type:** _Multi Line String_
 
   ### **Example:**
   ```
