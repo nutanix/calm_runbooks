@@ -2,7 +2,7 @@
 ## **`prism central IP (Required)`** 
 
   <details>
-  <summary><b>Description<b/></summary>
+  <summary><b>Description</b></summary>
  This variable represents the IP address or hostname of the Prism Central instance that will be used for the deployment. It is required for any operations that interact with Prism Central using API or CLI.
   
   </details>
@@ -490,7 +490,7 @@
   This variable represents password/key used to authenticate project enviornment resources.
   </details>
 
-  ### **Type:** _string_
+  ### **Type:** _String_
 
   ### **Example:**
   ```
