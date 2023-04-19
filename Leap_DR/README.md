@@ -5,14 +5,11 @@
   <details>
   <summary><b>Description</b></summary>
    This variable is a user-defined name given to a policy that determines how often and for how long backups or snapshots are taken of a specific object in the Nutanix cluster. This object can be a virtual machine, a container, or any other resource that requires protection against data loss. The policy can be configured with various options, such as backup frequency, retention period, backup schedule, compression, and encryption settings. This parameter is used to specify which protection policy to apply when creating or managing data protection policies for objects in the Nutanix cluster. The policy helps manage backup storage space, based on pre-defined recovery window goals.
-  </details>
+  </details>  
   
-  
-  ### **Type:** _String_ 
-
+  ### **Type:** _String_
 
   ### **Example:**
-
   ```
   policy123
   ```
@@ -29,7 +26,6 @@
   ### **Type:** _String_
 
   #### **Example:**
-
   ```
   Recoveryplan123
   ```
@@ -44,7 +40,6 @@
   ### **Type:** _Integer_
 
   ### **Example:**
-
   ```
   4
   ```
@@ -58,9 +53,7 @@
 
   ### **Type:** _String_
 
-
   ### **Example:**
-
   ```
   True
   ```
@@ -106,7 +99,6 @@
   #### **Type:** _String_
 
   #### **Example:**
-
   ```
   Immediate 
   or 
@@ -123,7 +115,6 @@
   ### **Type:** _String_
 
   ### **Example:**
-
   ```
   PHX-POC092
   ```
@@ -138,7 +129,6 @@
   #### **Type:** _String_
 
   #### **Example:**
-
   ```
   10.10.10.40
   ```
@@ -181,7 +171,6 @@
   ### **Type:** _String_
 
   ### **Example:**
-
   ```
   PHX-POC100
   ```
@@ -195,9 +184,7 @@
 
   ### **Type:** _String_
 
-
   ### **Example:**
-
   ```
   10.20.30.40
   ```
@@ -212,7 +199,6 @@
   ### **Type:** _String_
 
   ### **Example:**
-
   ```
   admin
   ```
@@ -267,9 +253,7 @@
 
   ### **Example:**
   ```
-  stretched 
-  or 
-  non-stretched
+  stretched (or) non-stretched
   ```
 
 #### **`Stage Delay [ In Seconds ] (Required)`**
@@ -280,7 +264,6 @@
   </details>
   
   ### **Type:** _Integer_
-
 
   ### **Example:**
   ```
@@ -412,7 +395,6 @@
   ### **Type:** _String_
 
   ### **Example:**
-
   ```
   10.10.10.20,10.20.20.40
   ```
