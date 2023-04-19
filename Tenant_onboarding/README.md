@@ -1,21 +1,4 @@
 # Runbook Variables
-## **`prism central IP (Required)`** 
-
-  <details>
-  <summary><b>Description</b></summary>
- This variable represents the IP address or hostname of the Prism Central instance that will be used for the deployment. It is required for any operations that interact with Prism Central using API or CLI.
-  
-  </details>
-  
-  
-  ### **Type:** _String_ 
-
-
-  ### **Example:**
-
-  ```
-  10.0.0.1
-  ```
 
 ## **`Management PC Username (Required)`**
 
