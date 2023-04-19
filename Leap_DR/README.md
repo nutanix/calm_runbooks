@@ -146,13 +146,12 @@
   ```
   admin
   ```
-
 ## **`Primary PC Password (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
     This variable refers to the username used to authenticate with the primary Prism Central instance in a Nutanix cluster for disaster recovery and backup purposes. Prism Central is a centralized management interface that provides a unified view of multiple Nutanix clusters, allowing administrators to manage and monitor their infrastructure from a single pane of glass. The primary Prism Central instance is the main instance that is used for managing and monitoring the Nutanix cluster, and it serves as the central point of control for data protection policies, disaster recovery, and other management tasks. The primary side Prism Central username parameter is used to specify the username of the account used to authenticate with the primary instance, which allows the deployment tool to connect to the instance and perform management tasks as needed."
-
+   </details>
   #### **Type:** _String_
 
   #### **Example:**
@@ -160,7 +159,6 @@
   ```
   nutanix/4u
   ```
-
 ## **`DR Account Cluster Name (Required)`**
 
   <details>
