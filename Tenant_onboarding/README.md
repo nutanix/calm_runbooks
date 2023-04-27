@@ -1,3 +1,8 @@
+# Tenant Onboarding Runbook
+The process of onboarding a new tenant is facilitated by the Service Provider using the Tenant onboarding runbook. The Service Provider executes this runbook from a Management cluster, which in turn creates all the required virtual resources on a Workload cluster for the tenant to run their applications. The workflow for the tenant onboarding process is illustrated below.
+
+![Tenant Onboarding](/images/tenant_onboarding.png)
+
 # Runbook Variables
 
 ## **`Management PC Username (Required)`**
@@ -9,9 +14,9 @@
   Nutanix Prism Central is a web-based management interface that allows administrators to manage and monitor multiple Nutanix clusters from a single interface. It provides a unified management experience across multiple Nutanix clusters and enables centralized management of virtualization, storage, and network resources.
 
   The Nutanix Prism Central management interface provides various features such as health monitoring, capacity planning, resource management, and user management. It also allows administrators to create and manage virtual machines, configure storage policies, and set up data protection policies.
-  
+
   To access the Prism Central management interface, you need to have valid credentials, which typically include a username and password. Once logged in, you can perform various administrative tasks, such as creating and managing Nutanix clusters, configuring network and storage resources, and monitoring the health and performance of your Nutanix infrastructure.
-  
+
   </details>
 
   ### **Type:** _String_
@@ -99,7 +104,7 @@
 
   <details>
   <summary><b>Description</b></summary>
-  This variable should be provided as input to specify the password used for authentication with the Nutanix Prism Central instance for workload management. The management password is required for performing administrative tasks related to workload management on the Nutanix clusters through the Prism Central management interface. It is used in combination with the management username to authenticate and access features such as creating and managing virtual machines, configuring storage policies, and setting up data protection policies. 
+  This variable should be provided as input to specify the password used for authentication with the Nutanix Prism Central instance for workload management. The management password is required for performing administrative tasks related to workload management on the Nutanix clusters through the Prism Central management interface. It is used in combination with the management username to authenticate and access features such as creating and managing virtual machines, configuring storage policies, and setting up data protection policies.
   </details>
 
   ### **Type:** _String_
@@ -191,7 +196,7 @@
   <summary><b>Description</b></summary>
   This variable is used to specify the name of the Nutanix cluster that will be used for the deployment. The cluster name is a unique identifier for a Nutanix cluster and is used for managing resources such as virtual machines, networks, storage, and user accounts. This variable is required for any operations that interact with the Nutanix cluster using API or CLI.
   </details>
-  
+
   ### **Type:** _String_
 
   ### **Example:**
@@ -248,7 +253,7 @@
   <summary><b>Description</b></summary>
   This variable is used to specify the IP address pool range for the external subnet on the Nutanix cluster. The IP address pool range defines the range of IP addresses that can be used for the external network connection. This variable is optional and only required if you have an external network connection configured on the Nutanix cluster and need to specify the IP address pool range for the external subnet.
   </details>
-  
+
   ### **Type:** _String_
 
 
@@ -347,7 +352,7 @@
   <summary><b>Description</b></summary>
   This variable represents the maximum amount of memory in gigabytes that can be consumed by virtual machines running in a Nutanix project. The memory quota is a limit set on the amount of memory that can be allocated to virtual machines, and it ensures that the project does not exceed its resource allocation. This quota can be adjusted as needed to optimize resource usage and meet changing workload demands.
   </details>
-  
+
   ### **Type:** _Integer_
 
   ### **Example:**
@@ -389,7 +394,7 @@
   <details>
   <summary><b>Description</b></summary>
   Creating a project environment refers to the process of setting up an isolated environment for a specific project on the Nutanix cluster. This involves configuring resources such as virtual machines, networks, storage, and other services required for the project. The project environment can be customized based on the project requirements, and it can be created using the Nutanix management interface, such as Prism Central or using APIs. The process typically involves defining the project requirements, selecting the resources, configuring the settings, and deploying the project environment. The project environment can also be managed and monitored using the Nutanix management interface to ensure optimal performance and availability.
-  
+
   This refers to the creation of a Calm environment within a Nutanix project, which allows for the deployment and management of applications and services. A Calm environment provides a platform for developing and publishing applications, and includes a range of tools and services for orchestration, automation, and monitoring. The creation of a Calm environment typically involves specifying the infrastructure resources required for the environment, such as virtual machines, networks, and storage, as well as the applications and services that will be deployed within the environment.
   </details>
 
