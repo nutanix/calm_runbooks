@@ -203,6 +203,7 @@
 
   It is important to ensure that the Nutanix Prism Central Username variable is correctly configured and kept up-to-date to ensure that the Nutanix clusters can be managed effectively. The username specified in this variable should have the appropriate level of permissions to perform the required management tasks in Prism Central.
   </details>
+  
   #### **Type:** _String_
 
   #### **Example:**
@@ -227,4 +228,3 @@
   ```
   nutanix/4u
   ```
-
