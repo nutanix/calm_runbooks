@@ -11,7 +11,7 @@
 
   ### **Example:**
   ```
-  10.20.30.40
+  test_1234
   ```
 
 ## **`VLAN ID (Required)`**
@@ -25,7 +25,7 @@
 
   #### **Example:**
   ```
-  test_subnet
+  100
   ```
 
 ## **`PC IP (Required)`**
@@ -39,7 +39,7 @@
 
   ### **Example:**
   ```
-  create / update / delete
+  10.40.50.60
   ```
 
 ## **`Operation (Required)`**
@@ -64,7 +64,7 @@
 
   ### **Example:**
   ```
-  10
+  create / update / delete
   ```
 
 ## **`Cluster Name (Required)`**
@@ -85,7 +85,7 @@
 
   ### **Example:**
   ```
-  ec2c7ade-141d-4c19-a036-36c5bda31a73
+  autopc-1278-55-t89
   ```
 
 ## **`Virtual Switch Name (Required)`**
@@ -99,7 +99,7 @@
 
   ### **Example:**
   ```
-  autopc-1278-55-t89
+  VS0
   ```
 
 ## **`VLAN UUID (Required)`**
@@ -113,7 +113,7 @@
 
   #### **Example:**
   ```
-  True / Fasle
+  338aef43-5297-4923-8451-662cd56646f5
   ```
 
 ## **`Network IP With Prefix (Required)`**
@@ -135,7 +135,7 @@
 
   ### **Example:**
   ```
-  10.10.40.0/24
+  10.10.10.0/24
   ```
 
 ## **`Gateway IP (Required)`**
@@ -155,7 +155,7 @@
 
   #### **Example:**
   ```
-  10.10.40.1
+  10.10.10.1
   ```
 
 ## **`IP Pools Range (Required)`**
@@ -181,7 +181,7 @@
 
   #### **Example:**
   ```
-  10.10.40.2-10.10.40.10
+  10.10.10.10-10.10.10.20
   ```
 ## **`TFTP Server (Required)`**
 
@@ -212,7 +212,7 @@
   #### **Example:**
 
   ```
-  admin
+  tftp.server.com
   ```
 ## **`Boot File Name (Required)`**
 
@@ -240,7 +240,7 @@
 
   ### **Example:**
   ```
-  nutanix/4u
+  boot.test
   ```
 
 ## **`Domain Search List (Required)`**
@@ -270,7 +270,7 @@
 
   ### **Example:**
   ```
-  nutanix/4u
+  domain.search.io
   ```
 ## **`Domain Name (Required)`**
 
@@ -295,30 +295,29 @@
 
   ### **Example:**
   ```
-  nutanix/4u
+  test.domain.com
   ```
 
 ## **`DNS Servers IP (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
-## Nutanix VLAN Subnet DNS Servers
 
-The Nutanix VLAN subnet DNS servers are responsible for resolving domain names to IP addresses within the VLAN subnet. They play a crucial role in enabling proper network communication and access to resources.
+  The Nutanix VLAN subnet DNS servers are responsible for resolving domain names to IP addresses within the VLAN subnet. They play a crucial role in enabling proper network communication and access to resources.
 
-- DNS Server 1: `10.0.0.1`
-- DNS Server 2: `10.0.0.2`
+  - DNS Server 1: `10.0.0.1`
+  - DNS Server 2: `10.0.0.2`
 
-To configure DNS settings for network devices within the Nutanix VLAN subnet, set the following DNS server IP addresses:
+  To configure DNS settings for network devices within the Nutanix VLAN subnet, set the following DNS server IP addresses:
 
-- DNS Server 1: `10.0.0.1`
-- DNS Server 2: `10.0.0.2`
+  - DNS Server 1: `10.0.0.1`
+  - DNS Server 2: `10.0.0.2`
 
-Make sure to enter the correct IP addresses of the DNS servers provided by your network infrastructure. These DNS servers will handle the resolution of domain names and allow network devices within the VLAN subnet to access resources using hostnames.
+  Make sure to enter the correct IP addresses of the DNS servers provided by your network infrastructure. These DNS servers will handle the resolution of domain names and allow network devices within the VLAN subnet to access resources using hostnames.
 
-Verify that the DNS servers are operational and accessible from devices within the VLAN subnet to ensure reliable DNS resolution.
+  Verify that the DNS servers are operational and accessible from devices within the VLAN subnet to ensure reliable DNS resolution.
 
-Note: The actual IP addresses of the DNS servers may vary based on your specific network configuration and requirements within the Nutanix VLAN subnet.
+  Note: The actual IP addresses of the DNS servers may vary based on your specific network configuration and requirements within the Nutanix VLAN subnet.
 
 </details>
 
@@ -326,7 +325,7 @@ Note: The actual IP addresses of the DNS servers may vary based on your specific
 
   ### **Example:**
   ```
-  nutanix/4u
+  8.8.8.6
   ```
 
 ## **`PC Username (Required)`**
@@ -344,7 +343,7 @@ Note: The actual IP addresses of the DNS servers may vary based on your specific
 
   ### **Example:**
   ```
-  nutanix/4u
+  admin
   ```
 
 ## **`PC Password (Required)`**
@@ -362,5 +361,5 @@ Note: The actual IP addresses of the DNS servers may vary based on your specific
 
   ### **Example:**
   ```
-  nutanix/4u
+  nutanix
   ```
