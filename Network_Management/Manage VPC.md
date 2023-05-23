@@ -42,7 +42,7 @@
         create: Set this option to create a new VPC.
         update: Set this option to modify an existing VPC.
         delete: Set this option to remove an existing VPC.
-        </details>
+  </details>
 
   ### **Type:** _String_
 
