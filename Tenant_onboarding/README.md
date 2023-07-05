@@ -3,6 +3,7 @@ The process of onboarding a new tenant is facilitated by the Service Provider us
 
 ![image](https://github.com/ideadevice/calm_runbooks/assets/97866756/b1300b17-8b14-45d9-8fb2-e979c59bda3b)
 
+![Tenant Onboarding](/images/tenant_onboarding.png)
 
 # Runbook Variables
 
