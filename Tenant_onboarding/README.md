@@ -1,7 +1,8 @@
 # Tenant Onboarding Runbook
 The process of onboarding a new tenant is facilitated by the Service Provider using the Tenant onboarding runbook. The Service Provider executes this runbook from a Management cluster, which in turn creates all the required virtual resources on a Workload cluster for the tenant to run their applications. The workflow for the tenant onboarding process is illustrated below.
 
-![Tenant Onboarding](/images/tenant_onboarding.png)
+![image](https://github.com/ideadevice/calm_runbooks/assets/97866756/b1300b17-8b14-45d9-8fb2-e979c59bda3b)
+
 
 # Runbook Variables
 
