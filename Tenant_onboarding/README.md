@@ -1,3 +1,10 @@
+The process of onboarding a new tenant is facilitated by the Service Provider using the Tenant onboarding runbook. The Service Provider executes this runbook from a Management cluster, which in turn creates all the required virtual resources on a Workload cluster for the tenant to run their applications. The workflow for the tenant onboarding process is illustrated below.
+
+Tenant Onboarding
+
+
+
+
 # Tenant Onboarding Runbook
 The process of onboarding a new tenant is facilitated by the Service Provider using the Tenant onboarding runbook. The Service Provider executes this runbook from a Management cluster, which in turn creates all the required virtual resources on a Workload cluster for the tenant to run their applications. The workflow for the tenant onboarding process is illustrated below.
 
