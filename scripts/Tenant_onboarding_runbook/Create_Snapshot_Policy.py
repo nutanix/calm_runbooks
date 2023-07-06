@@ -127,9 +127,12 @@ environment = @@{environment_details}@@
 account = @@{account_details}@@
 
 params['project_uuid'] = project['uuid']
-params['environment'] = environment['uuid']
+params['environment'] = environment.get('uuid', None)
 params['account_uuid'] = account['uuid']
 params['cluster_uuid'] = "@@{cluster_uuid}@@"
 
-protection_policy(**params)
-print("Snapshot Policy Created Successfully.")
+if environment:
+    protection_policy(**params)
+    print("Snapshot Policy Created Successfully.")
+else:
+    print("Add environments to start creating snapshot policies.")

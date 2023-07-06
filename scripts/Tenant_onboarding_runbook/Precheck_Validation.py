@@ -6,6 +6,8 @@ from requests.auth import HTTPBasicAuth
 PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_password = "@@{prism_central_passwd}@@".strip()
+mgmt_pc_username = "@@{prism_central_username}@@".strip()
+mgmt_pc_password = "@@{management_pc_password}@@".strip()
 skip_delete = False
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
@@ -127,17 +129,17 @@ def _get_vpc_uuid(vpc_name):
         
 def _get_project_uuid(project_name):
     global skip_delete
-    url = _build_url(scheme="https",resource_type="/projects/list")
+    url = _build_url(scheme="https",resource_type="/projects/list", host = "localhost")
     data = requests.post(url, json={"kind":"project", "filter":"name==%s"%project_name},
-                         auth=HTTPBasicAuth(pc_username, 
-                                            pc_password),
+                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                                            mgmt_pc_password),
                          timeout=None, verify=False)
     if data.ok:
         if data.json()['metadata']['total_matches'] == 0:
-            print("%s not present on %s"%(project_name, PC_IP))
+            print("%s not present on %s"%(project_name, "Management PC"))
             skip_delete = True
         elif data.json()['metadata']['total_matches'] > 1:
-            print("There are more than one projects with name - %s on - %s"%(project_name, PC_IP))
+            print("There are more than one projects with name - %s on - %s"%(project_name, "Management PC"))
             print("Please delete it manually before executing runbook.")
             exit(1)
         else:
@@ -148,19 +150,106 @@ def _get_project_uuid(project_name):
                                      data.json().get('error_detail', data.json())))
         exit(1)
 
+def _get_tunnel_uuid(tunnel_name):
+    global skip_delete
+    tunnel_state = ["CONNECTING","NOT_VALIDATED" ]
+    url = _build_url(scheme="https",resource_type="/tunnels/list",host="localhost")
+    data = requests.post(url, json={"kind": "tunnel","filter":"name==%s"%tunnel_name},
+                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                                            mgmt_pc_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        if data.json()['metadata']['total_matches'] == 0:
+            print("%s does not exist"%(tunnel_name))
+            skip_delete = True
+        elif data.json()['metadata']['total_matches'] > 1:
+            print("There are more than one tunnel with name - %s"%(tunnel_name))
+            print("Please delete it manually before executing runbook.")
+            exit(1)
+        elif data.json()['entities'][0]['status']['state'] in tunnel_state:
+            print("tunnel is in NOT_VALIDATED,Please delete it manually before executing runbook.")
+            exit(1)
+        else:
+            skip_delete = False
+            tunnel_uuid = data.json()['entities'][0]['status']['resources']['uuid']
+            return tunnel_uuid
+    else:
+        print("Error while fetching tunnel details :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
+
+def _get_network_group_uuid(tunnel_name):
+    global skip_delete
+    url = _build_url(scheme="https",resource_type="/network_groups/list",host="localhost")
+    data = requests.post(url, json={"kind": "network_group","filter":"name==%s"%tunnel_name},
+                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                                            mgmt_pc_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        if data.json()['metadata']['total_matches'] == 0:
+            print("%s does not exist"%(tunnel_name))
+            skip_delete = True
+        else:
+            skip_delete = False
+            group_uuid = data.json()['entities'][0]['status']['resources']['uuid']
+            return group_uuid
+    else:
+        print("Error while fetching network group details :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
+
+def delete_project_environment(project_name):
+    print("Fetching project environments information...")
+    project_name = project_name.strip()
+    url = _build_url(scheme="https", host="localhost",resource_type="/environments/list")
+    data = requests.post(url, json={"kind":"environment"},
+                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                                            mgmt_pc_password),
+                           timeout=None, verify=False)
+    uuid_list = []
+    if data.ok:
+        if data.json()["metadata"] > 0:
+            for _env in data.json()["entities"]:
+                if "project_reference" in _env["metadata"].keys():
+                    if _env["metadata"]["project_reference"]["name"] == project_name:
+                        uuid_list.append(_env["metadata"]["uuid"])
+        else:
+            print("Info : No environment found on localhost")
+    else:
+        print("Failed to fetch environment details.")
+        print(data.json().get('message_list',data.json().get('error_detail', data.json())))
+        exit(1)
+    
+    for _uuid in uuid_list:
+        url = _build_url(scheme="https", host="localhost",resource_type="/environments/%s"%_uuid)
+        data = requests.delete(url,auth=HTTPBasicAuth(mgmt_pc_username, 
+                                                  mgmt_pc_password),
+                           timeout=None, verify=False)
+        if data.ok:
+            if "Environment with uuid %s deleted"%_uuid not in data.json()["description"]:
+                print("Failed to project environment.",data.json())
+                exit(1)
+        else:
+            print("Error while deleting project environment.")
+            print(data.json().get('message_list',data.json().get('error_detail', data.json())))
+            exit(1)
+            
+    if uuid_list != []:
+        print("%s Project environment with %s uuid's deleted successfully."%(project_name, uuid_list))
+
 def wait_for_completion(data):
     if data.ok:
-        state = data.json()['status'].get('state')
+        state = data.json().get('status', None).get('state', None)
         while state == "DELETE_PENDING":
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
             responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
                                     verify=False)
-            if responce.json()['status'] in ['DELETE_PENDING']:
+            if responce.json().get('status', None) in ['DELETE_PENDING']:
                 state = 'DELETE_PENDING'
                 sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
+            elif responce.json().get('status', None) == 'FAILED':
                 print("Got Error ---> ",responce.json().get('message_list', 
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
@@ -194,6 +283,7 @@ overlay_subnet_items = {}
 project_items = {}
 AD_items = {}
 account_items = {}
+tunnel_items = {}
 
 tenant = "@@{tenant_name}@@".strip()
 cluster = "@@{cluster_name}@@".strip()
@@ -213,6 +303,7 @@ external_subnet_items['ip_pools'] = {"range":"%s %s"%(IP_POOL[0],IP_POOL[1])}
 
 vpc_items['name'] = "@@{tenant_name}@@_VPC"
 vpc_items['external_subnet_name'] = external_subnet_items['name']
+tunnel_items['name'] = "@@{tenant_name}@@_VPC_Tunnel"
 
 overlay_subnet = "@@{overlay_subnet_ip}@@".strip()
 overlay_subnet_ip, overlay_subnet_prefix = overlay_subnet.split("/")
@@ -267,10 +358,25 @@ print("overlay_subnet_items={}".format(overlay_subnet_items))
 print("project_items={}".format(project_items))
 print("AD_items={}".format(AD_items))
 print("account_items={}".format(account_items))
+print("Tunnel_items={}".format(tunnel_items))
 
-def _delete(type, uuid):
-    url = _build_url(scheme="https",resource_type="/%s/%s"%(type,_uuid))
-    data = requests.delete(url, auth=HTTPBasicAuth(pc_username, pc_password),
+def _delete(type, uuid, **params):
+    if(params.get("host",None)):
+        host = params['host']
+    else:
+        host = PC_IP
+    url = _build_url(scheme="https",host=host,resource_type="/%s/%s"%(type,uuid))
+    if(params.get("username",None)):
+        user_name = params['username']
+    else:
+        user_name = pc_username
+
+    if(params.get("password",None)):
+        pass_word = params['password']
+    else:
+        pass_word = pc_password
+    
+    data = requests.delete(url, auth=HTTPBasicAuth(user_name, pass_word),
                            timeout=None, verify=False)
     if not data.ok:
         print("Failed to delete existing %s with uuid %s."%(type, uuid))
@@ -280,9 +386,17 @@ def _delete(type, uuid):
         wait_for_completion(data)
         
 if "@@{delete_existing}@@".lower() == "yes":
-    _uuid = _get_project_uuid(project_items['name'])
+    _group_uuid = _get_network_group_uuid(tunnel_name=tunnel_items['name'])
+    _tunnel_uuid = _get_tunnel_uuid(tunnel_name=tunnel_items['name'])
     if skip_delete == False:
-        _delete(type="projects", uuid=_uuid)
+        _delete(type="network_groups/{}/tunnels".format(_group_uuid),uuid=_tunnel_uuid, username=mgmt_pc_username, password=mgmt_pc_password, host = "localhost")
+        sleep(5)
+
+    _uuid = _get_project_uuid(project_items['name'])
+
+    if skip_delete == False:
+        delete_project_environment(project_items['name'])
+        _delete(type="projects", uuid=_uuid,  username=mgmt_pc_username, password=mgmt_pc_password, host = "localhost")
         
     _uuid = _get_subnet_uuid(subnet=overlay_subnet_items['subnet_name'], delete=True)
     if skip_delete == False:
