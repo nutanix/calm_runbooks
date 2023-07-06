@@ -108,7 +108,6 @@ def get_account_info(az_url):
     payload = {
         "entity_type": "availability_zone_physical",
         "grouping_attribute": "type",
-        "group_member_count": 1,
         "group_member_attributes": [
             {
                 "attribute": "name"
