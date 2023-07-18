@@ -108,7 +108,6 @@ def get_account_info(az_url):
     payload = {
         "entity_type": "availability_zone_physical",
         "grouping_attribute": "type",
-        "group_member_count": 1,
         "group_member_attributes": [
             {
                 "attribute": "name"
@@ -153,7 +152,7 @@ def recovery_plan_info(plan_name):
 
 params = {"recovery_plan_name":"@@{recovery_plan_name}@@".strip(),
           "recovery_plan_uuid":recovery_plan_info("@@{recovery_plan_name}@@".strip()),
-          "failed_availability_zone_uuid":get_account_info("@@{production_availability_zone_name}@@".strip()),
-          "recovery_availability_zone_uuid":get_account_info("@@{recovery_availability_zone_name}@@".strip())
+          "failed_availability_zone_uuid":get_account_info("@@{account_name_failing_over_from}@@".strip()),
+          "recovery_availability_zone_uuid":get_account_info("@@{account_name_failing_over_to}@@".strip())
          }
 test_failover(**params)

@@ -2,9 +2,9 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "@@{PC_IP}@@".strip()
-pc_username = "@@{prism_central_username}@@".strip()
-pc_password = "@@{prism_central_passwd}@@".strip()
+PC_IP = "@@{PC_IP}@@"
+pc_username = "@@{prism_central_username}@@"
+pc_password = "@@{prism_central_passwd}@@"
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -18,20 +18,16 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def _get_default_spec(nic_uuid, external_subnet_uuid, **params):
+def _get_default_spec(external_subnet_uuid, **params):
     return ({
               "spec": {
-                "description": params.get('description', "Floating IP for VM %s"%params["vm_name"]),
+                "description": params.get('description', "Floating IP for @@{vm_ip}@@"),
                 "resources": {
                   "external_subnet_reference": {
                     "kind": "subnet",
                     "uuid": external_subnet_uuid
-                  },
-                  "vm_nic_reference": {
-                    "kind": "vm_nic",
-                        "uuid": nic_uuid
-                    }
-                 }
+                  }
+                }
               },
               "api_version": "3.1.0",
               "metadata": {
@@ -56,6 +52,26 @@ def get_subnet_uuid(subnet):
             return data.json()['entities'][0]['metadata']['uuid']
     else:
         print("Error while fetching subnet details :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
+        
+def get_vpc_uuid(vpc):
+    url = _build_url(scheme="https",resource_type="/vpcs/list")
+    data = requests.post(url, json={"kind":"vpc", "filter":"name==%s"%vpc},
+                         auth=HTTPBasicAuth(pc_username, pc_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        if data.json()['metadata']['total_matches'] == 0:
+            print("%s not present on %s"%(vpc, PC_IP))
+            exit(1)
+        elif data.json()['metadata']['total_matches'] > 1:
+            print("There are more than one VPCs with name - %s on - %s"%(vpc, PC_IP))
+            print("Please delete it manually before executing runbook.")
+            exit(1)
+        else:
+            return data.json()['entities'][0]['metadata']['uuid']
+    else:
+        print("Error while fetching VPC details :- ",data.json().get('message_list',
                                      data.json().get('error_detail', data.json())))
         exit(1)
         
@@ -95,9 +111,27 @@ def get_nic_uuid(vm_name):
         exit(1)
         
 def generate_floating_ip(**params):
-    nic_uuid = get_nic_uuid(params["vm_name"])
     external_subnet_uuid = get_subnet_uuid(params["external_subnet"])
-    payload = _get_default_spec(nic_uuid, external_subnet_uuid, **params)
+    print("======================================")     
+    payload = _get_default_spec(external_subnet_uuid, **params)
+    
+    if "IP" in params.keys():
+        vpc_uuid = get_vpc_uuid(params["vpc_name"])
+        payload["spec"]["resources"]["private_ip"] = "@@{vm_ip}@@"
+        payload["spec"]["resources"]["vpc_reference"] = {
+                                                         "kind":"vpc",
+                                                         "uuid":vpc_uuid
+                                                        }
+    elif "VM_Name" in params.keys():
+        nic_uuid = get_nic_uuid(params["VM_Name"])
+        payload["spec"]["resources"]["vm_nic_reference"] = {
+                                                            "kind": "vm_nic",
+                                                            "uuid":nic_uuid
+                                                           }
+    else:
+        print("Input Error :- User should provide VM IP in 'VM IP'")
+        exit(1)
+        
     url = _build_url(scheme="https",
                     resource_type="/floating_ips")
     data = requests.post(url, json=payload,
@@ -105,6 +139,18 @@ def generate_floating_ip(**params):
                         timeout=None, verify=False)
     wait_for_completion(data)
     print("floating_ip_details={}".format({"IP_uuid": data.json()['metadata']['uuid']}))
+    
+    sleep(5)
+    _url = _build_url(scheme="https",
+                     resource_type="/floating_ips/%s"%(data.json()['metadata']['uuid']))
+    _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
+    if (_data.ok) and ("status" in _data.json()):
+        print("Floating IP assigned to '%s' is :- %s"%("@@{vm_ip}@@",
+                          _data.json()["status"]["resources"]["floating_ip"]))
+    else:
+        print("Failed to fetch details of newly created floating IP.")
+        print("Please check it manually.")
+        exit(1)
 
 def wait_for_completion(data):
     if data.ok:
@@ -128,10 +174,17 @@ def wait_for_completion(data):
         state = data.json().get('state')
         print("Got error while generating floating IP --->",data.json())
         exit(1)
-
+        
 params = {
-              "vm_name":"@@{vm_name}@@".strip(),
-              "external_subnet":"@@{external_subnet_name}@@".strip()
+              "external_subnet":"@@{external_subnet_name}@@"
          }
+
+if "@@{assignment_type}@@" == "IP":
+    params["IP"] = "@@{vm_ip}@@"
+    params["vpc_name"] = "@@{vpc_name}@@"
+    if params["vpc_name"].lower() in ["", "na", "none"]:
+        print("Input Error :- VPC Name is Mandatory for 'Floating IP Assignment Type = IP'.")
+        exit(1)
+
 print("##### Generating Floating IP #####")
-generate_floating_ip(**params)                                                      
+generate_floating_ip(**params)

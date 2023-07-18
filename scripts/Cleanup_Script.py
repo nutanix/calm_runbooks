@@ -14,6 +14,7 @@ vpc_name = "{}_VPC".format(tenant)
 external_subnet_name = "{}_External_Subnet".format(tenant)
 overlay_subnet_name = "{}_Overlay_Subnet".format(tenant)
 project_name = "{}_project".format(tenant)
+tunnel_name = "@@{tenant_name}@@"+"_VPC_Tunnel"
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -26,6 +27,64 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     else:
         url += "/{0}".format(resource_type)
     return url
+
+def _get_tunnel_uuid(tunnel_name):
+    tunnel_state = ["CONNECTING","NOT_VALIDATED" ]
+    url = _build_url(scheme="https",resource_type="/tunnels/list",host="localhost")
+    data = requests.post(url, json={"kind": "tunnel","filter":"name==%s"%tunnel_name},
+                         auth=HTTPBasicAuth(management_username, 
+                                            management_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        if data.json()['metadata']['total_matches'] == 0:
+            print("%s does not exist"%(tunnel_name))
+        elif data.json()['metadata']['total_matches'] > 1:
+            print("There are more than one tunnel with name - %s"%(tunnel_name))
+            print("Please delete it manually before executing runbook.")
+            exit(1)
+        elif data.json()['entities'][0]['status']['state'] in tunnel_state:
+            print("tunnel is in NOT_VALIDATED,Please delete it manually before executing runbook.")
+            exit(1)
+        else:
+            tunnel_uuid = data.json()['entities'][0]['status']['resources']['uuid']
+            return tunnel_uuid
+    else:
+        print("Error while fetching tunnel details :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
+
+def _get_network_group_uuid(tunnel_name):
+    url = _build_url(scheme="https",resource_type="/network_groups/list",host="localhost")
+    data = requests.post(url, json={"kind": "network_group","filter":"name==%s"%tunnel_name},
+                         auth=HTTPBasicAuth(management_username, 
+                                            management_password),
+                         timeout=None, verify=False)
+    if data.ok:
+        if data.json()['metadata']['total_matches'] == 0:
+            print("%s does not exist"%(tunnel_name))
+        else:
+            group_uuid = data.json()['entities'][0]['status']['resources']['uuid']
+            return group_uuid
+    else:
+        print("Error while fetching network group details :- ",data.json().get('message_list',
+                                     data.json().get('error_detail', data.json())))
+        exit(1)
+
+
+def delete_tunnel(tunnel_name):
+    print("Fetching tunnel details:{}".format(tunnel_name))
+    tunnel_name = tunnel_name.strip()
+    _group_uuid = _get_network_group_uuid(tunnel_name)
+    _tunnel_uuid = _get_tunnel_uuid(tunnel_name)               
+    if _group_uuid:
+        url = _build_url(scheme="https",resource_type="network_groups/{}/tunnels/{}".format(_group_uuid, _tunnel_uuid),host = "localhost", username=management_username, password=management_password)
+        data = requests.delete(url, auth=HTTPBasicAuth(management_username, management_password),
+                               timeout=None, verify=False)
+
+        print("%s deleting tunnel with name "%tunnel_name)
+    else:
+        print("Info : %s tunnel not present on Management PC"%(tunnel_name))
+
 
 def delete_vpc(vpc_name):
     print("Fetching %s VPC information..."%vpc_name)
@@ -41,7 +100,6 @@ def delete_vpc(vpc_name):
                     _uuid = _vpc['metadata']['uuid']
         else:
             print("%s VPC not present on %s"%(vpc_name, PC_IP))
-            exit(1)
     else:
         print("Failed to fetch %s VPC details"%vpc_name)
         print(data.json())
@@ -70,7 +128,6 @@ def delete_subnet(subnet_name):
                     _uuid = _subnet['metadata']['uuid']
         else:
             print("%s Subnet not present on %s"%(subnet_name, PC_IP))
-            exit(1)
     else:
         print("Failed to fetch %s Subnet details"%(subnet_name))
         print(data.json())
@@ -98,10 +155,8 @@ def _get_project_uuid(project_name):
                 if _project['spec']['name'] == project_name:
                     return _project['metadata']['uuid']
             print("%s Project not present on localhost"%(project_name))
-            exit(1)
         else:
             print("%s Project not present on localhost"%(project_name))
-            exit(1)
     else:
         print("Failed to fetch %s project details"%(project_name))
         print(data.json())
@@ -288,10 +343,10 @@ def wait_for_completion(data, user, password, PC, task_uuid=None):
                              resource_type="/tasks/%s"%task_uuid)
             responce = requests.get(url, auth=HTTPBasicAuth(user, password), 
                                     verify=False)
-            if responce.json()['status'] in ['DELETE_PENDING', 'RUNNING', 'QUEUED']:
+            if responce.json().get('status', None) in ['DELETE_PENDING', 'RUNNING', 'QUEUED']:
                 state = 'DELETE_PENDING'
                 sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
+            elif responce.json().get('status', None) == 'FAILED':
                 print("Error ---> ",responce.json().get('message_list', 
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
@@ -308,6 +363,7 @@ if "@@{delete_only_network}@@" == "False":
         delete_applications(project_name)
         delete_blueprints(project_name)
         delete_app_protection_policies(project_name)
+        delete_tunnel(tunnel_name)
         delete_project_environment(project_name)
         delete_project(project_name)
         delete_subnet(overlay_subnet_name)
@@ -317,6 +373,7 @@ if "@@{delete_only_network}@@" == "False":
       raise e
 else:
     try:
+        delete_tunnel(tunnel_name)
         delete_subnet(overlay_subnet_name)
         delete_vpc(vpc_name)
         delete_subnet(external_subnet_name)

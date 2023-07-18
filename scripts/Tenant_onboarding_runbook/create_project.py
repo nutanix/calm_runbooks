@@ -46,6 +46,23 @@ def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc
     collection = "ALL"
     if "@@{allow_collaboration}@@".lower() == "false":
         collection = "SELF_OWNED"
+    external_network = []
+    subnet_reference = []
+    if "@@{account_name}@@".strip() == "NTNX_LOCAL_AZ":
+        subnet_reference = [
+            {
+            "kind": "subnet",
+            "name": subnet_name,
+            "uuid": subnet_uuid
+            }
+            ]
+    else:
+        external_network = [
+            {
+            "name": subnet_name,
+            "uuid": subnet_uuid
+            }
+            ]
         
     return ({
     "spec": {
@@ -290,12 +307,7 @@ def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc
         "project_detail": {
             "name": project_name,
             "resources": {
-                "external_network_list": [
-                    {
-                        "name": subnet_name,
-                        "uuid": subnet_uuid
-                    }
-                    ],
+                "external_network_list": external_network,
                 "account_reference_list": [
                     {
                         "kind": "account",
@@ -321,9 +333,7 @@ def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc
                 ],
                 "tunnel_reference_list": [],
                 "external_user_group_reference_list": [],
-                "subnet_reference_list": [
-
-                ],
+                "subnet_reference_list": subnet_reference,
                 "resource_domain": {},
                 "cluster_reference_list": [
                     {
@@ -556,6 +566,7 @@ def build_project(**params):
     data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
+
     if data.ok:
         wait_for_completion(data)
     else:

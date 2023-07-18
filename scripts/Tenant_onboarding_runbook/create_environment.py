@@ -25,7 +25,7 @@ def get_cluster_account_uuid():
     cluster_name = "@@{cluster_name}@@".strip()
     account_name = "@@{account_name}@@".strip()
     url = _build_url(scheme="https",host="localhost",resource_type="/accounts/list")
-    data = requests.post(url, json={"kind":"account"},
+    data = requests.post(url, json={"kind":"account","length": 250},
                         auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
     if not data.ok:
@@ -251,7 +251,7 @@ def create_env():
     return {"uuid": data.json()['metadata']['uuid'],
            			"name":payload['spec']['name'],
                     "default": True}
-environment = ""
+environment = {}
 if "@@{create_environment}@@".lower() == "yes":
     environment = create_env()
 print("environment_details={}".format(environment))
