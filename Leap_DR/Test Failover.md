@@ -16,11 +16,24 @@
   Test_recovery
   ```
 
-## **`Account Name of Entity Failing Over From (Required)`**
+## **`Availability Zone of Entity  Failing Over From (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
-    The Nutanix Account Name refers to the name of the entity or organization that is failing over from one environment to another within the Nutanix infrastructure. It typically represents the account or organization associated with the source environment that is being transitioned or failed over to a target environment.
+    Availability Zones (AZs) play a crucial role in disaster recovery strategies for cloud-based systems. An Availability Zone is essentially a data center or a cluster of data centers within a specific geographic region. Each Availability Zone is designed to be isolated from failures in other zones and has its own power, cooling, networking, and physical security measures in place.
+    
+    The primary objective of a disaster recovery solution is to ensure that critical business systems and data can be recovered in the event of a disaster or major disruption. This recovery can involve:
+
+    Replicating data: The entity's data is replicated from the primary environment to the secondary environment, which may span multiple Availability Zones or regions. This replication can occur in near real-time to minimize data loss in the event of a failure.
+
+    Activating failover: When a disaster occurs or the primary environment becomes unavailable, the entity is failed over to the secondary environment. This involves redirecting traffic, activating standby resources, and ensuring that the necessary infrastructure and services are available in the secondary environment.
+
+    Testing and validation: Regular testing of the disaster recovery plan is crucial to ensure its effectiveness. This may involve conducting planned failover exercises to simulate a disaster scenario and validate the failover process, including the activation of the entity in the secondary environment across different Availability Zones.
+
+    It's important to note that the specific process of failing over from one entity to another using a disaster recovery solution can vary depending on the cloud service provider, the architecture of the application or infrastructure, and the specific requirements of the organization.
+
+    In summary, when implementing disaster recovery, an entity is typically failed over from its primary environment to a secondary environment that spans multiple Availability Zones. The failover process involves replicating data, activating failover mechanisms, and conducting regular testing to ensure the effectiveness of the disaster recovery solution.
+
   </details>
 
   ### **Type:** _String_
@@ -30,13 +43,11 @@
   LOCAL_AZ
   ```
 
-## **`Account Name of Entity Failing Over To (Required)`**
+## **`Availability Zone of Entity  Failing Over To (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
-    The Account Name of the entity failing over to a Nutanix environment represents the name of the target account or organization that is receiving the failover or migration from another environment. In the context of Nutanix, this typically refers to the account or organization associated with the destination or target Nutanix environment.
-
-    The specific Account Name will depend on the configuration and setup of the Nutanix deployment in the target environment. It could be the name of a company, department, or any other entity that owns and manages the Nutanix infrastructure in that specific environment.
+    The variable you are referring to is commonly known as a "failover zone" or "failover target." A failover zone is an alternative Availability Zone where applications can be redirected or switched to in the event of a failure or outage in the primary zone.
   </details>
 
   ### **Type:** _String_
@@ -75,7 +86,7 @@
 
   ### **Example:**
   ```
-  admin
+  nutanix/4u
   ```
 ## **`Prism Central Username (Required)`**
 
@@ -92,5 +103,5 @@
 
   ### **Example:**
   ```
-  nutanix/4u
+  admin
   ```
