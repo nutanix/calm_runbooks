@@ -38,8 +38,6 @@ def get_cluster_account_uuid():
                 for _cluster in new_data["status"]["resources"]["data"]["cluster_account_reference_list"]:
                     if _cluster["resources"]["data"]["cluster_name"] == cluster_name:
                         return _cluster["uuid"]
-        print("Error : %s account not present on %s"%(account_name,PC_IP))
-        exit(1)
     else:
         print("Error : %s account not present on %s"%(account_name,PC_IP))
         exit(1)
