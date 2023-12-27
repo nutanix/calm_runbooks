@@ -22,7 +22,7 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     return url
     
 def get_cluster_account_uuid():
-    cluster_name = "@@{cluster_name}@@".strip()
+    cluster_uuid = "@@{cluster_uuid}@@".strip()
     account_name = "@@{account_name}@@".strip()
     url = _build_url(scheme="https",host="localhost",resource_type="/accounts/list")
     data = requests.post(url, json={"kind":"account","length": 250},
@@ -36,8 +36,10 @@ def get_cluster_account_uuid():
         for new_data in data.json()['entities']:
             if new_data['metadata']['name'] == account_name:
                 for _cluster in new_data["status"]["resources"]["data"]["cluster_account_reference_list"]:
-                    if _cluster["resources"]["data"]["cluster_name"] == cluster_name:
+                    if _cluster["resources"]["data"]["cluster_uuid"] == cluster_uuid:
                         return _cluster["uuid"]
+        print("Error : %s account not present on %s"%(account_name,PC_IP))
+        exit(1)
     else:
         print("Error : %s account not present on %s"%(account_name,PC_IP))
         exit(1)
