@@ -1,11 +1,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 pc_username ="@@{management_pc_username}@@".strip()
 pc_password = "@@{management_pc_password}@@".strip()
 
-def _build_url(scheme, resource_type, host="localhost", **params):
+def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
     url = "{proto}://{host}".format(proto=scheme, host=host)
     port = params.get('nutanix_port', '9440')
@@ -48,7 +48,7 @@ def _get_spec_acp():
                 "role_reference": {"uuid": ""}
                 }
             })
-            
+
 def create_AD(**params):
     payload = _get_default_spec()
     payload['spec']['name'] = params['name']
@@ -89,13 +89,13 @@ def wait_for_completion(data, name):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
@@ -108,9 +108,9 @@ def wait_for_completion(data, name):
                     state = "COMPLETE"
                 else:
                     state = 'PENDING'
-                    sleep(5) 
+                    sleep(5)
     else:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
     return data.json()['status']['execution_context']['task_uuid']
@@ -118,4 +118,4 @@ def wait_for_completion(data, name):
 
 params = @@{AD_items}@@
 print("##### Configuring Active Directory #####")
-create_AD(**params)                                                      
+create_AD(**params)

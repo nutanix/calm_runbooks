@@ -3,7 +3,7 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 pc_user = "@@{management_pc_username}@@".strip()
 pc_password = "@@{management_pc_password}@@".strip()
 
@@ -24,30 +24,30 @@ def get_account_uuid():
     url = _build_url(scheme="https",resource_type="/accounts/list")
     data = requests.post(url, json={"kind":"account", "filter":"name==%s"%account},
                         auth=HTTPBasicAuth(pc_user, pc_password),
-                        timeout=None, verify=False)       
+                        timeout=None, verify=False)
     if account in str(data.json()):
         for new_data in data.json()['entities']:
-           if new_data['metadata']['name'] == account: 
+           if new_data['metadata']['name'] == account:
                 account_uuid = new_data['metadata']['uuid']
                 return account_uuid
     else:
         print("Error : %s account not present on %s"%(account,PC_IP))
-        exit(1)    
-            
+        exit(1)
+
 def get_spec(**params):
     url = _build_url(scheme="https",
                     resource_type="/idempotence_identifiers")
     data = requests.post(url, json={"count": 1,"valid_duration_in_minutes": 527040},
                         auth=HTTPBasicAuth(pc_user, pc_password),
-                        timeout=None, verify=False)                   
+                        timeout=None, verify=False)
     if data.ok:
         _uuid = data.json()['uuid_list'][0]
     else:
         print("Error :- Failed to generate Idempotence UUID.")
         exit(1)
-        
+
     #account_uuid = get_account_uuid()
-    
+
     return (
     {"api_version": "3.1.0",
     "metadata": {
@@ -85,7 +85,7 @@ def create_tunnel(**params):
                         auth=HTTPBasicAuth(pc_user,pc_password),
                         timeout=None, verify=False)
     wait_for_completion(data)
-    
+
 def wait_for_completion(data):
     if data.ok:
         state = 'PENDING'
@@ -94,20 +94,20 @@ def wait_for_completion(data):
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
             responce = requests.get(url, auth=HTTPBasicAuth(pc_user, pc_password),
-                                    verify=False)                      
+                                    verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Error occured ---> ",responce.json().get('message_list', 
-                                            responce.json().get('error_detail', 
+                print("Error occured ---> ",responce.json().get('message_list',
+                                            responce.json().get('error_detail',
                                                                 responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "SUCCEEDED"
     else:
-        print("Error occured ---> ",data.json().get('message_list', 
+        print("Error occured ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
 
