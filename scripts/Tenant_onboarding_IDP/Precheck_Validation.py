@@ -6,7 +6,8 @@ from requests.auth import HTTPBasicAuth
 PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_password = "@@{prism_central_passwd}@@".strip()
-mgmt_pc_username = "@@{prism_central_username}@@".strip()
+mgmt_pc_ip = "@@{management_pc_ip}@@".strip()
+mgmt_pc_username = "@@{management_pc_username}@@".strip()
 mgmt_pc_password = "@@{management_pc_password}@@".strip()
 skip_delete = False
 
@@ -27,7 +28,7 @@ def _get_cluster_details(cluster_name):
     url = _build_url(scheme="https",
                     resource_type="/clusters/list")
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, pc_password), 
+                         auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
     if data.ok:
         for _cluster in data.json()['entities']:
@@ -40,37 +41,30 @@ def _get_cluster_details(cluster_name):
         print("Error while fetching %s cluster info"%cluster_name)
         print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
-            
-def _get_virtual_switch_uuid(virtual_switch_name, cluster_uuid): 
-    payload = {"entity_type": "distributed_virtual_switch", 
-               "filter": "name==%s"%virtual_switch_name}
+
+def _get_virtual_switch_uuid(virtual_switch_name, cluster_uuid):
+
+    # fetch switch using name and cluster uuid
+    payload = {"entity_type": "distributed_virtual_switch",
+               "filter_criteria": "cluster_configuration_list.cluster_uuid=cs={0};name=={1}".format(cluster_uuid, virtual_switch_name)}
     url = _build_url(scheme="https",
-                    resource_type="/groups")                
+                    resource_type="/groups")
     data = requests.post(url, json=payload,
                          auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
+    group_results = []
     if data.ok:
-        _uuid = data.json()['group_results'][0]['entity_results'][0]['entity_id']
-        _url = "https://%s:9440/api/networking/v2.a1/dvs/virtual-switches/%s?proxyClusterUuid=%s"%(PC_IP,
-                                                                                                _uuid,
-                                                                                                cluster_uuid)
-        _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_password),verify=False)
-        if _data.json()['data']['name'] == virtual_switch_name:
-            print("virtual switch uuid ----> ",_uuid)
-            return str(_uuid)
-        else:
-            print("Input Error :- %s virtual switch not present on %s"%(virtual_switch_name, PC_IP))
-            exit(1)
-    else:
-        print("Error while fetching virtual switch details :- ",data.json().get('message_list',
-                                                                                data.json().get('error_detail', 
-                                                                                data.json())))
+        group_results = data.json().get('group_results')
+    if not group_results:
+        print("Given virtual switch with name {0} doesn't exist in given cluster. Exiting".format(virtual_switch_name))
+        exit(1)
+    return group_results[0].get('entity_id')
 
 def _get_subnet_uuid(subnet, delete=False):
     global skip_delete
     url = _build_url(scheme="https",resource_type="/subnets/list")
     data = requests.post(url, json={"kind":"subnet", "filter":"name==%s"%subnet},
-                         auth=HTTPBasicAuth(pc_username, 
+                         auth=HTTPBasicAuth(pc_username,
                                             pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -90,7 +84,7 @@ def _get_subnet_uuid(subnet, delete=False):
         print("Error while fetching subnet details :- ",data.json().get('message_list',
                                      data.json().get('error_detail', data.json())))
         exit(1)
-        
+
 def get_subnet_details(_uuid):
     url = _build_url(scheme="https",resource_type="/subnets/%s"%_uuid)
     data = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
@@ -103,12 +97,12 @@ def get_subnet_details(_uuid):
     else:
         print("project_subnet_address={}".format(data.json()['spec']\
             ['resources']['ip_config']['pool_list'][0]['range'].split( )[-1]))
-        
+
 def _get_vpc_uuid(vpc_name):
     global skip_delete
     url = _build_url(scheme="https",resource_type="/vpcs/list")
     data = requests.post(url, json={"kind":"vpc", "filter":"name==%s"%vpc_name},
-                         auth=HTTPBasicAuth(pc_username, 
+                         auth=HTTPBasicAuth(pc_username,
                                             pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -126,12 +120,12 @@ def _get_vpc_uuid(vpc_name):
         print("Error while fetching VPC details :- ",data.json().get('message_list',
                                      data.json().get('error_detail', data.json())))
         exit(1)
-        
+
 def _get_project_uuid(project_name):
     global skip_delete
-    url = _build_url(scheme="https",resource_type="/projects/list", host = "localhost")
+    url = _build_url(scheme="https",resource_type="/projects/list", host = mgmt_pc_ip)
     data = requests.post(url, json={"kind":"project", "filter":"name==%s"%project_name},
-                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                         auth=HTTPBasicAuth(mgmt_pc_username,
                                             mgmt_pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -153,9 +147,9 @@ def _get_project_uuid(project_name):
 def _get_tunnel_uuid(tunnel_name):
     global skip_delete
     tunnel_state = ["CONNECTING","NOT_VALIDATED" ]
-    url = _build_url(scheme="https",resource_type="/tunnels/list",host="localhost")
+    url = _build_url(scheme="https",resource_type="/tunnels/list",host=mgmt_pc_ip)
     data = requests.post(url, json={"kind": "tunnel","filter":"name==%s"%tunnel_name},
-                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                         auth=HTTPBasicAuth(mgmt_pc_username,
                                             mgmt_pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -180,9 +174,9 @@ def _get_tunnel_uuid(tunnel_name):
 
 def _get_network_group_uuid(tunnel_name):
     global skip_delete
-    url = _build_url(scheme="https",resource_type="/network_groups/list",host="localhost")
+    url = _build_url(scheme="https",resource_type="/network_groups/list",host=mgmt_pc_ip)
     data = requests.post(url, json={"kind": "network_group","filter":"name==%s"%tunnel_name},
-                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                         auth=HTTPBasicAuth(mgmt_pc_username,
                                             mgmt_pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -201,9 +195,9 @@ def _get_network_group_uuid(tunnel_name):
 def delete_project_environment(project_name):
     print("Fetching project environments information...")
     project_name = project_name.strip()
-    url = _build_url(scheme="https", host="localhost",resource_type="/environments/list")
+    url = _build_url(scheme="https", host=mgmt_pc_ip,resource_type="/environments/list")
     data = requests.post(url, json={"kind":"environment"},
-                         auth=HTTPBasicAuth(mgmt_pc_username, 
+                         auth=HTTPBasicAuth(mgmt_pc_username,
                                             mgmt_pc_password),
                            timeout=None, verify=False)
     uuid_list = []
@@ -219,10 +213,10 @@ def delete_project_environment(project_name):
         print("Failed to fetch environment details.")
         print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
-    
+
     for _uuid in uuid_list:
-        url = _build_url(scheme="https", host="localhost",resource_type="/environments/%s"%_uuid)
-        data = requests.delete(url,auth=HTTPBasicAuth(mgmt_pc_username, 
+        url = _build_url(scheme="https", host=mgmt_pc_ip,resource_type="/environments/%s"%_uuid)
+        data = requests.delete(url,auth=HTTPBasicAuth(mgmt_pc_username,
                                                   mgmt_pc_password),
                            timeout=None, verify=False)
         if data.ok:
@@ -233,7 +227,7 @@ def delete_project_environment(project_name):
             print("Error while deleting project environment.")
             print(data.json().get('message_list',data.json().get('error_detail', data.json())))
             exit(1)
-            
+
     if uuid_list != []:
         print("%s Project environment with %s uuid's deleted successfully."%(project_name, uuid_list))
 
@@ -244,23 +238,23 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
                                     verify=False)
             if responce.json().get('status', None) in ['DELETE_PENDING']:
                 state = 'DELETE_PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json().get('status', None) == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
-                state = "COMPLETE" 
+                state = "COMPLETE"
     else:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
-        
+
 def _get_ip(IP):
     ip_list = IP.split(".")
     gatewat_digit = int(ip_list[-1]) + 1
@@ -276,7 +270,7 @@ def _get_ip(IP):
     end_ip.append(str(end_digit))
     end_ip = ".".join(end_ip)
     return (gateway_ip, start_ip, end_ip)
-    
+
 external_subnet_items = {}
 vpc_items = {}
 overlay_subnet_items = {}
@@ -294,7 +288,7 @@ external_subnet_items['name'] = "@@{tenant_name}@@_External_Subnet"
 external_subnet_items['cluster'] = cluster
 external_subnet_items['enable_nat'] = @@{external_subnet_nat}@@
 external_subnet_items['virtual_switch_name'] = "@@{virtual_switch}@@".strip()
-_uuid = _get_virtual_switch_uuid(external_subnet_items['virtual_switch_name'], cluter_uuid)
+external_subnet_items['virtual_switch_uuid'] = _get_virtual_switch_uuid(external_subnet_items['virtual_switch_name'], cluter_uuid)
 external_subnet_items['gateway_ip'] = "@@{external_subnet_gateway_ip}@@".strip()
 external_subnet_items['network_ip'] = external_subnet_ip
 external_subnet_items['prefix'] = int(external_subnet_prefix)
@@ -313,7 +307,7 @@ overlay_subnet_items['network_ip'] = overlay_subnet_ip
 overlay_subnet_items['prefix'] = int(overlay_subnet_prefix)
 overlay_subnet_items['gateway_ip'] = "@@{overlay_subnet_gateway_ip}@@".strip()
 IP = _get_ip(overlay_subnet_ip)
-overlay_subnet_items['ip_pool'] = [{"ip_pools_start_ip":IP[1], 
+overlay_subnet_items['ip_pool'] = [{"ip_pools_start_ip":IP[1],
                                      "ip_pools_end_ip":IP[2]}]
 print("project_subnet_address={}".format(IP[2]))
 
@@ -363,7 +357,7 @@ def _delete(type, uuid, **params):
         pass_word = params['password']
     else:
         pass_word = pc_password
-    
+
     data = requests.delete(url, auth=HTTPBasicAuth(user_name, pass_word),
                            timeout=None, verify=False)
     if not data.ok:
@@ -372,30 +366,30 @@ def _delete(type, uuid, **params):
         exit(1)
     else:
         wait_for_completion(data)
-        
+
 if "@@{delete_existing}@@".lower() == "yes":
     _group_uuid = _get_network_group_uuid(tunnel_name=tunnel_items['name'])
     _tunnel_uuid = _get_tunnel_uuid(tunnel_name=tunnel_items['name'])
     if skip_delete == False:
-        _delete(type="network_groups/{}/tunnels".format(_group_uuid),uuid=_tunnel_uuid, username=mgmt_pc_username, password=mgmt_pc_password, host = "localhost")
+        _delete(type="network_groups/{}/tunnels".format(_group_uuid),uuid=_tunnel_uuid, username=mgmt_pc_username, password=mgmt_pc_password, host = mgmt_pc_ip)
         sleep(5)
-    
+
     _uuid = _get_project_uuid(project_items['name'])
 
     if skip_delete == False:
         delete_project_environment(project_items['name'])
-        _delete(type="projects", uuid=_uuid, host="localhost", username=mgmt_pc_username, password=mgmt_pc_password)
-        
+        _delete(type="projects", uuid=_uuid, host=mgmt_pc_ip, username=mgmt_pc_username, password=mgmt_pc_password)
+
     _uuid = _get_subnet_uuid(subnet=overlay_subnet_items['subnet_name'], delete=True)
     if skip_delete == False:
         _delete(type="subnets", uuid=_uuid)
         sleep(5)
-    
+
     _uuid = _get_vpc_uuid(vpc_items['name'])
     if skip_delete == False:
         _delete(type="vpcs", uuid=_uuid)
         sleep(5)
-        
+
     _uuid = _get_subnet_uuid(subnet=external_subnet_items['name'], delete=True)
     if skip_delete == False:
         _delete(type="subnets", uuid=_uuid)

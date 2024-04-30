@@ -44,13 +44,13 @@ def _get_ipam_spec(**params):
         ipam_spec["default_gateway_ip"] = ipam_config["gateway_ip"]
         pools = []
         for ip_pools in params['ip_pool']:
-            pools.append({"range": "%s %s"%(ip_pools['ip_pools_start_ip'], 
-                                            ip_pools['ip_pools_end_ip'])})                                
+            pools.append({"range": "%s %s"%(ip_pools['ip_pools_start_ip'],
+                                            ip_pools['ip_pools_end_ip'])})
         ipam_spec["pool_list"] = pools
         if "dhcp_options" in ipam_config:
             dhcp_spec = _get_default_dhcp_spec()
             dhcp_config = ipam_config["dhcp_options"]
-            if dhcp_config['domain_name_server_list'] != 'None': 
+            if dhcp_config['domain_name_server_list'] != 'None':
                 dhcp_spec["domain_name_server_list"] = dhcp_config["domain_name_server_list"]
             if dhcp_config["domain_search_list"] != 'None':
                 dhcp_spec["domain_search_list"] = dhcp_config["domain_search_list"]
@@ -91,24 +91,24 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                             resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
-    return data.json()['status']['execution_context']['task_uuid']  
-                                     
+    return data.json()['status']['execution_context']['task_uuid']
+
 def create_overlay_subnet():
     params = {}
     print("##### Creating Overlay Subnets #####")
@@ -127,7 +127,7 @@ def create_overlay_subnet():
     params['ipam']['dhcp_options']['domain_name'] = params_dict.get('domain_name', 'None')
     params['ipam']['dhcp_options']['boot_file_name'] = params_dict.get('boot_file', "None")
     params['ipam']['dhcp_options']['tftp_server_name'] = params_dict.get('tftp_server', "None")
-            
+
     payload = _get_default_spec()
     if params_dict.get('vpc_name', 'None') != 'None':
         vpc_details = @@{vpc_details}@@
@@ -135,7 +135,7 @@ def create_overlay_subnet():
         payload["spec"]["resources"]["vpc_reference"] = params['vpc_reference']
     payload["spec"]['name'] = params_dict['subnet_name']
     payload["spec"]["resources"]["subnet_type"] = "OVERLAY"
-            
+
     if params_dict.get('network_ip', 'None') != 'None':
         params['ipam_spec'] = _get_ipam_spec(**params)
         print("Overlay Subnet IP range - %s"%params['ip_pool'])
@@ -143,7 +143,7 @@ def create_overlay_subnet():
 
 
     url = _build_url(scheme="https",
-                    resource_type="/subnets")    
+                    resource_type="/subnets")
     data = requests.post(url, json=payload,
                          auth=HTTPBasicAuth(pc_username, pc_password),
                          timeout=None, verify=False)
