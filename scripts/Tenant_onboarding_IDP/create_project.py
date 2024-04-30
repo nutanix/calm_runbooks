@@ -9,7 +9,7 @@ ROLE_DEVELOPER = "Developer"
 ROLE_CONSUMER = "Consumer"
 ROOT_OU = 'tenants'
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 management_username = "@@{management_pc_username}@@".strip()
 management_password = "@@{management_pc_password}@@".strip()
 
@@ -20,8 +20,8 @@ def get_role_uuid(role_name):
       'kind': 'role',
       'offset': 0
     }
-    r = requests.post(api_url, json=payload, 
-                    auth=HTTPBasicAuth(management_username, management_password), 
+    r = requests.post(api_url, json=payload,
+                    auth=HTTPBasicAuth(management_username, management_password),
                     timeout=None, verify=False)
     result = json.loads(r.content)
     if result.get('entities', 'None') != 'None':
@@ -40,7 +40,7 @@ def get_project_specs(project):
         return data.json()
     else:
         print(data.json())
-    
+
 def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc_uuid,project_name,project_uuid,subnet_name):
     project_specs = get_project_specs(project_uuid)
     collection = "ALL"
@@ -63,7 +63,7 @@ def get_spec(role_uuid,user_uuid,user_name,idp_uuid,account_uuid,subnet_uuid,vpc
             "uuid": subnet_uuid
             }
             ]
-        
+
     return ({
     "spec": {
         "access_control_policy_list": [
@@ -407,7 +407,7 @@ def _get_default_spec():
                 }
             }
         )
-            
+
 def _get_user_spec():
     return ({
         "api_version": "3.1.0",
@@ -419,9 +419,9 @@ def _get_user_spec():
             }
         })
 def is_user_exist_in_pc(user):
-    _url = _build_url(scheme="https",resource_type="/users/list")                        
+    _url = _build_url(scheme="https",resource_type="/users/list")
     _data = requests.post(_url, json={"kind":"user", "filter":"username==%s"%user},
-                                 auth=HTTPBasicAuth(management_username, 
+                                 auth=HTTPBasicAuth(management_username,
                                                     management_password),
                                  timeout=None, verify=False)
     if _data.ok:
@@ -440,7 +440,7 @@ def get_user_uuid(user, **params):
 
     user_uuid = is_user_exist_in_pc(user)
     if not user_uuid:
-        payload = _get_user_spec()   
+        payload = _get_user_spec()
         ad = @@{idp_details}@@
         payload['spec']['resources']['identity_provider_user'] = {}
         payload['spec']['resources']['identity_provider_user']\
@@ -452,10 +452,10 @@ def get_user_uuid(user, **params):
                 ['identity_provider_reference']['kind'] = "identity_provider"
         payload['spec']['resources']['identity_provider_user']\
                     ['identity_provider_reference']['uuid'] = ad["uuid"]
-                    
+
         url = _build_url(scheme="https",resource_type="/users")
         data = requests.post(url, json=payload,
-                            auth=HTTPBasicAuth(management_username, 
+                            auth=HTTPBasicAuth(management_username,
                                             management_password),
                             timeout=None, verify=False)
 
@@ -467,13 +467,13 @@ def get_user_uuid(user, **params):
             exit(1)
     else:
         return user_uuid
-        
+
     # url = _build_url(scheme="https",
     #                 resource_type="/idempotence_identifiers/salted")
     # payload = {"name_list":[user]}
     # data = requests.post(url, json=payload,
     #                     auth=HTTPBasicAuth(management_username, management_password),
-    #                     timeout=None, verify=False)                   
+    #                     timeout=None, verify=False)
     # if data.ok:
     #     _uuid = data.json()["name_uuid_list"][0][user]
     #     print("user_uuid----> %s"%_uuid)
@@ -481,7 +481,7 @@ def get_user_uuid(user, **params):
     # else:
     #     print("Error while fetching user details :- ",data.json())
     #     exit(1)
-        
+
 def create_empty_project(project_name):
     payload = {
         "api_version": "3.0",
@@ -498,7 +498,7 @@ def create_empty_project(project_name):
             "access_control_policy_list": []
         }
     }
-    
+
     url = _build_url(scheme="https",resource_type="/projects_internal")
     data = requests.post(url, json=payload,
                         auth=HTTPBasicAuth(management_username, management_password),
@@ -506,13 +506,13 @@ def create_empty_project(project_name):
     if data.ok:
         wait_for_completion(data)
     else:
-        print("Failed with Error ---> ",data.json().get('message_list', 
+        print("Failed with Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
-    
+
     return data.json()["metadata"]["uuid"]
-    
-def build_project(**params):    
+
+def build_project(**params):
     vpc_details = @@{vpc_details}@@
     admin_role_uuid = get_role_uuid(ROLE_ADMIN)
     operator_role_uuid = get_role_uuid(ROLE_OPERATOR)
@@ -522,26 +522,26 @@ def build_project(**params):
     print('ROLE_OPERATOR_UUID={}'.format(operator_role_uuid))
     print('ROLE_DEVELOPER_UUID={}'.format(developer_role_uuid))
     print('ROLE_CONSUMER_UUID={}'.format(consumer_role_uuid))
-        
+
     overlay_subnets = @@{overlay_subnet_details}@@
     subnet_uuid = overlay_subnets["uuid"]
     subnet_name = overlay_subnets["name"]
-    
+
     account_uuid = ""
     if params.get('accounts', 'None') != "None":
         url = _build_url(scheme="https",resource_type="/accounts/list")
         data = requests.post(url, json={"kind":"account", "filter":"name==%s"%params['accounts']},
                         auth=HTTPBasicAuth(management_username, management_password),
-                        timeout=None, verify=False)       
+                        timeout=None, verify=False)
         if params['accounts'] in str(data.json()):
             for new_data in data.json()['entities']:
-                if new_data['metadata']['name'] == params['accounts']: 
+                if new_data['metadata']['name'] == params['accounts']:
                     account_uuid = new_data['metadata']['uuid']
                     print("account_details={}".format({"uuid": account_uuid}))
         else:
             print("Error : %s account not present on %s"%(params['accounts'],PC_IP))
-            exit(1)         
-                                   
+            exit(1)
+
     user_details = []
     all_users = []
     user = "@@{project_admin_user}@@".strip()
@@ -549,25 +549,25 @@ def build_project(**params):
     if user_uuid != "None":
         user_details.append({'name':user, 'uuid':user_uuid})
     print("user_details={}".format(user_details))
-    
+
     idp_uuid =  @@{idp_details}@@
 
     #idp_uuid = idp['uuid']
     print("group_details={}".format([]))
     vpc_uuid = @@{vpc_details}@@
     project_uuid = create_empty_project(project_name=params['name'])
-    payload = get_spec(role_uuid=admin_role_uuid, 
-                       user_uuid=user_details[0]["uuid"], 
-                       user_name=user_details[0]["name"], 
-                       idp_uuid=idp_uuid["uuid"], 
-                       account_uuid=account_uuid, 
+    payload = get_spec(role_uuid=admin_role_uuid,
+                       user_uuid=user_details[0]["uuid"],
+                       user_name=user_details[0]["name"],
+                       idp_uuid=idp_uuid["uuid"],
+                       account_uuid=account_uuid,
                        subnet_uuid=subnet_uuid,
                        vpc_uuid=vpc_uuid["uuid"],
                        project_name=params['name'],
                        project_uuid=project_uuid,
                        subnet_name=subnet_name)
     if params.get("quotas", "None") != "None":
-        payload["spec"]["project_detail"]["resources"]["resource_domain"] = {}  
+        payload["spec"]["project_detail"]["resources"]["resource_domain"] = {}
         resources = []
         for resource in params['quotas']:
             if resource.get("mem_gb", 0) != 0:
@@ -579,7 +579,7 @@ def build_project(**params):
             if resource.get("vcpu", 0) != 0:
                 resources.append({"resource_type":"VCPUS", "limit":resource['vcpu']})
         payload["spec"]["project_detail"]["resources"]["resource_domain"] = {"resources": resources}
-        
+
     url = _build_url(scheme="https",resource_type="/projects_internal/%s"%project_uuid)
     data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(management_username, management_password),
@@ -587,10 +587,10 @@ def build_project(**params):
     if data.ok:
         wait_for_completion(data)
     else:
-        print("Failed with Error ---> ",data.json().get('message_list', 
+        print("Failed with Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
-    
+
     if 'status' not in data.json():
         print("Project %s not created successfully."%params['name'])
         print(data.json())
@@ -604,7 +604,7 @@ def build_project(**params):
         print("Project not created successfully, Check inputs and payload")
         print(data.json())
         exit(1)
-  
+
 def wait_for_completion(data):
     if data.ok:
         state = data.json()['status'].get('state')
@@ -612,13 +612,13 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(management_username,management_password), 
-                                    verify=False)                      
+            responce = requests.get(url, auth=HTTPBasicAuth(management_username,management_password),
+                                    verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
@@ -627,10 +627,10 @@ def wait_for_completion(data):
     else:
         state = data.json().get('state')
         if "DUPLICATE_ENTITY" not in str(data.json()):
-            print("Error ---> ",data.json().get('message_list', 
+            print("Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
             exit(1)
 
 print("##### Creating a Project #####")
 params = @@{project_items}@@
-build_project(**params)                                       
+build_project(**params)

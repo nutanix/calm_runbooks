@@ -2,7 +2,7 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 pc_username = "@@{management_pc_username}@@".strip()
 pc_password = "@@{management_pc_password}@@".strip()
 
@@ -26,7 +26,7 @@ def cluster_details(cluster=None):
     url = _build_url(scheme="https",
                     resource_type="/clusters/list")
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, pc_password), 
+                         auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
     if data.ok:
         for _cluster in data.json()['entities']:
@@ -38,7 +38,7 @@ def cluster_details(cluster=None):
         print("Error while fetching %s cluster info"%cluster_name)
         print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
-        
+
 def add_quotas(account,**params):
     if params.get("quotas", "None") != "None":
         memory = 0
@@ -53,7 +53,7 @@ def add_quotas(account,**params):
                 disk = storage_gb
             if resource.get("vcpu", 0) != 0:
                 vcpus = resource['vcpu']
-                
+
         cluster_uuid = "@@{cluster_uuid}@@"
         project_details = @@{project_details}@@
         account_details = @@{account_details}@@
@@ -64,7 +64,7 @@ def add_quotas(account,**params):
 
         if not account:
             entities = {"project": project_details['uuid']}
-            
+
         url = _build_url(scheme="https",
                         resource_type="/idempotence_identifiers")
         data = requests.post(url, json={"count": 1,"valid_duration_in_minutes": 527040},
@@ -93,18 +93,18 @@ def add_quotas(account,**params):
                     "uuid": _uuid
                 }
             }})
-    
+
         url = "https://{}:9440/api/calm/v3.0/quotas".format(PC_IP)
         data = requests.post(url, json=payload,
-                        auth=HTTPBasicAuth(pc_username, 
+                        auth=HTTPBasicAuth(pc_username,
                                            pc_password),
                         timeout=None, verify=False)
-        wait_for_completion(data) 
+        wait_for_completion(data)
     else:
         print("Quota not set for project %s"%project_details['name'])
-        
+
     enable_quota_state(account_details['uuid'], project_details['uuid'])
-        
+
 def enable_quota_state(account, project):
     payload = {"spec":{
                       "resources":{
@@ -114,13 +114,13 @@ def enable_quota_state(account, project):
                       }
                   }
               }
-            
+
     url = "https://{}:9440/api/calm/v3.0/quotas/update/state".format(PC_IP)
     data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
-    wait_for_completion(data) 
-      
+    wait_for_completion(data)
+
     payload = {"spec":{
                       "resources":{
                                    "entities":{
@@ -130,13 +130,13 @@ def enable_quota_state(account, project):
                       }
                   }
               }
-            
+
     url = "https://{}:9440/api/calm/v3.0/quotas/update/state".format(PC_IP)
     data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(pc_username, pc_password),
                         timeout=None, verify=False)
-    wait_for_completion(data) 
-      
+    wait_for_completion(data)
+
 def wait_for_completion(data):
     if data.status_code in [200, 202]:
         state = data.json()['status'].get('state')
@@ -144,20 +144,20 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username,pc_username), 
-                                    verify=False)                      
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username,pc_username),
+                                    verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
 

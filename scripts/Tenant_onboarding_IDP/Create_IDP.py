@@ -2,7 +2,7 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 pc_username ="@@{management_pc_username}@@".strip()
 pc_password = "@@{management_pc_password}@@".strip()
 
@@ -19,7 +19,7 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     else:
         url += "/{0}".format(resource_type)
     return url
-    
+
 def wait_for_completion(data):
     if data.ok:
         state = data.json().get('status', None).get('state', None)
@@ -28,19 +28,19 @@ def wait_for_completion(data):
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
             responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
-                                    verify=False)                      
+                                    verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Error occured ---> ",data.json().get('message_list', 
+                print("Error occured ---> ",data.json().get('message_list',
                                         data.json().get('error_detail', data.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
-        print("Error occured ---> ",data.json().get('message_list', 
+        print("Error occured ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
 
@@ -58,7 +58,7 @@ def get_spec():
 
 def identity_providers():
     payload = get_spec()
-    payload["spec"]["resources"]["idp_metadata"] = """@@{idp_metadata}@@"""
+    payload["spec"]["resources"]["idp_metadata"] = r"""@@{idp_metadata}@@"""
     url = _build_url(scheme="https",
                     resource_type="/identity_providers")
     data = requests.post(url, json=payload,
@@ -73,8 +73,8 @@ def identity_providers():
     print("idp_details={}".format({"name":"@@{idp_name}@@",
                                   "uuid":idp_uuid}))
     return idp_uuid
-    
-    
+
+
 def create_role_mapping(idp_uuid):
     query_string = "&entityType=USER&role=ROLE_CLUSTER_VIEWER"
     url = "https://%s:9440/PrismGateway/services/rest/v1/"\
@@ -101,7 +101,7 @@ data = requests.post(url, json={"kind": "identity_provider"},
 total_match = data.json()["metadata"]['total_matches']
 if total_match > 0:
     for x in data.json()['entities']:
-        if x['status']['resources']['idp_properties']['idp_url'] in '''@@{idp_metadata}@@''':
+        if x['status']['resources']['idp_properties']['idp_url'] in r"""@@{idp_metadata}@@""":
             idp_details["uuid"] = x['metadata']['uuid']
             idp_details['name'] = x['status']['name']
 

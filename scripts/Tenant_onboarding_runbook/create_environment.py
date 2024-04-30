@@ -6,6 +6,7 @@ PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_password = "@@{prism_central_passwd}@@".strip()
 
+management_pc_ip = "@@{management_pc_ip}@@".strip()
 management_username = "@@{management_pc_username}@@".strip()
 management_password = "@@{management_pc_password}@@".strip()
 
@@ -20,30 +21,28 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     else:
         url += "/{0}".format(resource_type)
     return url
-    
+
 def get_cluster_account_uuid():
     cluster_name = "@@{cluster_name}@@".strip()
     account_name = "@@{account_name}@@".strip()
-    url = _build_url(scheme="https",host="localhost",resource_type="/accounts/list")
+    url = _build_url(scheme="https",host=management_pc_ip,resource_type="/accounts/list")
     data = requests.post(url, json={"kind":"account","length": 250},
                         auth=HTTPBasicAuth(management_username, management_password),
                         timeout=None, verify=False)
     if not data.ok:
         print("Error while fetching account details. -->", data.json())
         exit(1)
-        
+
     if account_name in str(data.json()):
         for new_data in data.json()['entities']:
             if new_data['metadata']['name'] == account_name:
                 for _cluster in new_data["status"]["resources"]["data"]["cluster_account_reference_list"]:
                     if _cluster["resources"]["data"]["cluster_name"] == cluster_name:
                         return _cluster["uuid"]
-        print("Error : %s account not present on %s"%(account_name,PC_IP))
-        exit(1)
     else:
         print("Error : %s account not present on %s"%(account_name,PC_IP))
         exit(1)
-        
+
 def _get_spec():
     tenantuuid = "@@{tenant_uuid}@@"
     account = get_cluster_account_uuid()
@@ -54,7 +53,7 @@ def _get_spec():
     project_subnet = @@{overlay_subnet_details}@@
     env_memory = (@@{project_memory}@@ / 2) * 1024
     subnet_references = []
-    
+
     connection_type = "POWERSHELL"
     connection_port = 5985
     connection_protocol = "http"
@@ -62,13 +61,13 @@ def _get_spec():
         connection_type = "SSH"
         connection_port = 22
         connection_protocol = ""
-        
+
     nic_list = []
     nics = {}
     nics['subnet_reference'] = {'uuid': project_subnet["uuid"]}
     subnet_references.append({'uuid': project_subnet["uuid"]})
     nic_list.append(nics)
-    
+
     url = _build_url(scheme="https",
                     resource_type="/idempotence_identifiers")
     data = requests.post(url, json={"count": 2,"valid_duration_in_minutes": 527040},
@@ -95,7 +94,7 @@ def _get_spec():
                     		},
                     		"uuid": creds_uuid
                 		}]
-    
+
     if _creds_type == "KEY":
         _pass = {"passphrase": {
                     "attrs": {
@@ -143,7 +142,7 @@ def _get_spec():
 
     serial_port = []
     serial_port.append({"index": 0, "is_connected": True})
-        
+
     return ({
     		"api_version": "3.0",
     		"metadata": {
@@ -191,7 +190,7 @@ def _get_spec():
                             		"num_vcpus_per_socket": 1,
                             		"memory_size_mib": env_memory,
                             		"account_uuid": account
-                                    
+
                         		},
                         		"categories": {"TenantName":"@@{tenant_name}@@".strip()}
                     		},
@@ -239,13 +238,13 @@ def create_env():
             guest_customization = {"cloud_init":{"user_data": """@@{guest_customization_script}@@"""}}
         payload['spec']['resources']['substrate_definition_list'][0]['create_spec']\
              ['resources']['guest_customization'] = guest_customization
-        
-    url = _build_url(scheme="https",host="localhost", resource_type="/environments")
+
+    url = _build_url(scheme="https",host=management_pc_ip, resource_type="/environments")
     data = requests.post(url, json=payload,
                         auth=HTTPBasicAuth(management_username,management_password),
                         timeout=None, verify=False)
     if not data.ok:
-        print("Error while creating environment ---> ",data.json().get('message_list', 
+        print("Error while creating environment ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
     return {"uuid": data.json()['metadata']['uuid'],

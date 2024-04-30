@@ -46,23 +46,23 @@ def create_vpc(**params):
         payload["spec"]["resources"]["externally_routable_prefix_list"] = \
                                 params["externally_routable_prefix_list"]
     url = _build_url(scheme="https",
-                        resource_type="/vpcs")    
+                        resource_type="/vpcs")
     data = requests.post(url, json=payload,
                          auth=HTTPBasicAuth(pc_username, pc_password ),
                          timeout=None, verify=False)
-                         
+
     if not data.ok:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
     else:
         task_uuid = wait_for_completion(data)
-        vpc = {"name": params['name'], 
+        vpc = {"name": params['name'],
                "uuid":data.json()['metadata']['uuid'],
                "create_vpc_task_uuid": task_uuid}
         create_static_route(vpc["uuid"])
         return vpc
-        
+
 def _get_route_spec(vpc_uuid, subnet_uuid,subnet_name):
     ip_prefix = "0.0.0.0/0"
     url = _build_url(scheme="https",
@@ -95,10 +95,10 @@ def create_static_route(vpc_uuid):
     payload = _get_route_spec(vpc_uuid, subnet_uuid, subnet_name)
     url = _build_url(scheme="https",
                     resource_type="/vpcs/%s/route_tables"%vpc_uuid)
-    data = requests.put(url, json=payload, 
+    data = requests.put(url, json=payload,
                         auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
     wait_for_completion(data)
-    
+
 def wait_for_completion(data):
     if data.status_code in [200, 202]:
         state = data.json()['status'].get('state')
@@ -106,20 +106,20 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Got Error ---> ",responce.json().get('message_list', 
+                print("Got Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
             else:
                 state = "COMPLETE"
     else:
-        print("Got Error ---> ",data.json().get('message_list', 
+        print("Got Error ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
     return data.json()['status']['execution_context']['task_uuid']
@@ -142,14 +142,14 @@ def set_params():
                                             params_dict["externally_routable_ip"]
         params["externally_routable_prefix_list"][0]["prefix_length"] = \
                                             params_dict["externally_routable_ip_prefix"]
-                                            
+
     if params_dict.get("external_subnet_name", "None") != "None":
         params["external_subnet_list"][0]["external_subnet_reference"] = {}
         params["external_subnet_list"][0]["external_subnet_reference"]["kind"] = "subnet"
         params["external_subnet_list"][0]["external_subnet_reference"]["name"] = \
                                             params_dict["external_subnet_name"]
         params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = ext_subnet["uuid"]
-                                            
+
     if params_dict.get("external_subnet_uuid", "None") != "None":
         params["external_subnet_list"][0]["external_subnet_reference"]["uuid"] = \
                                                params_dict['external_subnet_uuid']

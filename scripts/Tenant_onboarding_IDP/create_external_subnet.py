@@ -18,14 +18,14 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
     else:
         url += "/{0}".format(resource_type)
     return url
-  
+
 def _get_cluster_details(cluster_name):
     cluster_details = {'kind':'cluster'}
     payload = {"kind": "cluster"}
     url = _build_url(scheme="https",
                     resource_type="/clusters/list")
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, pc_password), 
+                         auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
     if data.ok:
         for _cluster in data.json()['entities']:
@@ -38,34 +38,6 @@ def _get_cluster_details(cluster_name):
         print("Error while fetching %s cluster info"%cluster_name)
         print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
-    
-def _get_virtual_switch_uuid(virtual_switch_name):
-    cluster = "@@{cluster_name}@@".strip()
-    _cluster = _get_cluster_details(cluster)
-    cluster_uuid = _cluster['uuid']
-    payload = {"entity_type": "distributed_virtual_switch", 
-               "filter": "name==%s"%virtual_switch_name}
-    url = _build_url(scheme="https",
-                    resource_type="/groups")                
-    data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, pc_password),
-                         verify=False)
-    if data.ok:
-        _uuid = data.json()['group_results'][0]['entity_results'][0]['entity_id']
-        _url = "https://%s:9440/api/networking/v2.a1/dvs/virtual-switches/%s?proxyClusterUuid=%s"%(PC_IP,
-                                                                                                _uuid,
-                                                                                                cluster_uuid)
-        _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_password),verify=False)
-        if _data.json()['data']['name'] == virtual_switch_name:
-            print("virtual switch uuid ----> ",_uuid)
-            return str(_uuid)
-        else:
-            print("Input Error :- %s virtual switch not present on %s"%(virtual_switch_name, PC_IP))
-            exit(1)
-    else:
-        print("Error while fetching virtual switch details :- ",data.json().get('message_list',
-                                                                                data.json().get('error_detail', 
-                                                                                data.json())))
 
 def _get_default_spec():
     return (
@@ -117,8 +89,7 @@ def create_external_subnet(**params):
     payload["spec"]["resources"]["ip_config"] = params['ipam_spec']
     payload["spec"]["cluster_reference"] = cluster_details
     if params['enable_nat'] == False:
-        switch_details = _get_virtual_switch_uuid(params['virtual_switch_name'])
-        payload["spec"]["resources"]["virtual_switch_uuid"] = switch_details
+        payload["spec"]["resources"]["virtual_switch_uuid"] = params['virtual_switch_uuid']
     payload["spec"]["resources"]["is_external"] = True
     payload["spec"]["resources"]["enable_nat"] = params['enable_nat']
     url = _build_url(scheme="https",
@@ -159,7 +130,7 @@ def create_external_subnet(**params):
                 print(data.json().get('message_list', data.json().get('error_detail', data.json())))
                 exit(1)
         else:
-            print("Failed to create external subnet ---> ",data.json().get('message_list', 
+            print("Failed to create external subnet ---> ",data.json().get('message_list',
                                     data.json().get('error_detail', data.json())))
             exit(1)
 
@@ -170,11 +141,11 @@ def wait_for_completion(data, vlan_id=None):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password),
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING','QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
                 if "subnet exists with vlan id" in str(responce.json()).lower():
                     print("Another external subnet exist with sam VLAN ID, fetching details..")
@@ -199,18 +170,18 @@ def wait_for_completion(data, vlan_id=None):
                         print(data.json().get('message_list', data.json().get('error_detail', data.json())))
                         exit(1)
                 else:
-                    print("Error ---> ",responce.json().get('message_list', 
+                    print("Error ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                     state = 'FAILED'
                     exit(1)
             else:
                 state = "COMPLETE"
     return {}
-            
+
 def _get_vlan_id():
     url = _build_url(scheme="https",resource_type="/subnets/list")
     data = requests.post(url, json={"kind":"subnet"},
-                         auth=HTTPBasicAuth(pc_username, 
+                         auth=HTTPBasicAuth(pc_username,
                                             pc_password),
                          timeout=None, verify=False)
     if data.ok:
@@ -237,6 +208,7 @@ def set_params():
     params['cluster_name'] = params_dict.get('cluster', "None")
     params['vlan_id'] = @@{external_vlan_id}@@
     params['virtual_switch_name'] = params_dict.get('virtual_switch_name', "None")
+    params['virtual_switch_uuid'] = params_dict.get('virtual_switch_uuid', "None")
     params['ipam'] = {}
     params['set_ipam'] = "yes"
     params['ipam']['network_ip'] = params_dict.get('network_ip', 'None')

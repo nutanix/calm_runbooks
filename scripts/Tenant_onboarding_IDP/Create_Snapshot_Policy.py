@@ -2,7 +2,7 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-PC_IP = "localhost"
+PC_IP = "@@{management_pc_ip}@@".strip()
 pc_username = "@@{management_pc_username}@@".strip()
 pc_password = "@@{management_pc_password}@@".strip()
 
@@ -23,7 +23,7 @@ def get_policy_spec(**params):
                     resource_type="/idempotence_identifiers")
     data = requests.post(url, json={"count": 1,"valid_duration_in_minutes": 527040},
                         auth=HTTPBasicAuth(pc_username, pc_password),
-                        timeout=None, verify=False)                   
+                        timeout=None, verify=False)
     _uuid = ""
     if data.ok:
         _uuid = data.json()['uuid_list'][0]
@@ -94,7 +94,7 @@ def protection_policy(**params):
     #print("protection_rule_uuid={}".format(data.json()["spec"]\
     #                    ["resources"]["app_protection_rule_list"][0]["uuid"]))
     wait_for_completion(data)
-    
+
 def wait_for_completion(data):
     if data.ok:
         state = data.json()['status'].get('state')
@@ -107,9 +107,9 @@ def wait_for_completion(data):
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
-                sleep(5)                
+                sleep(5)
             elif responce.json()['status'] == 'FAILED':
-                print("Failed to create Snapshot Policy ---> ",responce.json().get('message_list', 
+                print("Failed to create Snapshot Policy ---> ",responce.json().get('message_list',
                                         responce.json().get('error_detail', responce.json())))
                 state = 'FAILED'
                 exit(1)
@@ -117,17 +117,17 @@ def wait_for_completion(data):
                 state = "COMPLETE"
     else:
         state = data.json().get('state')
-        print("Failed to create Snapshot Policy ---> ",data.json().get('message_list', 
+        print("Failed to create Snapshot Policy ---> ",data.json().get('message_list',
                                 data.json().get('error_detail', data.json())))
         exit(1)
-        
+
 params = {}
 project = @@{project_details}@@
 environment = @@{environment_details}@@
 account = @@{account_details}@@
 
 params['project_uuid'] = project['uuid']
-params['environment'] = environment.get('uuid',None)
+params['environment'] = environment.get('uuid', None)
 params['account_uuid'] = account['uuid']
 params['cluster_uuid'] = "@@{cluster_uuid}@@"
 
