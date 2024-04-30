@@ -202,7 +202,7 @@ def delete_project_environment(project_name):
                            timeout=None, verify=False)
     uuid_list = []
     if data.ok:
-        if data.json()["metadata"] > 0:
+        if data.json().get("metadata", {}).get("total_matches", 0) > 0:
             for _env in data.json()["entities"]:
                 if "project_reference" in _env["metadata"].keys():
                     if _env["metadata"]["project_reference"]["name"] == project_name:
