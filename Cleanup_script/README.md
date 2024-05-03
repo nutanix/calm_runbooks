@@ -1,6 +1,19 @@
 # Runbook Variables
 
-## **`Management PC Username (Required)`** 
+## **`Management PC IP (Required)`**
+
+  <details>
+  <summary><b>Description</b></summary>
+  This variable should be provided as input to specify the IP address or hostname of the Nutanix Prism Central management interface. The Prism Central instance acts as a centralized management interface for multiple Nutanix clusters, allowing administrators to manage and monitor workloads across different clusters from a single interface. This variable is required.
+  </details>
+
+  ### **Type:** _String_
+  ### **Example:**
+  ```
+  10.44.46.56
+  ```
+
+## **`Management PC Username (Required)`**
 
   <details>
   <summary><b>Description</b></summary>
@@ -12,8 +25,8 @@
 
   To access the Prism Central management interface, you need to have valid credentials, which typically include a username and password. Once logged in, you can perform various administrative tasks, such as creating and managing Nutanix clusters, configuring network and storage resources, and monitoring the health and performance of your Nutanix infrastructure.
 
-  </details>  
-    
+  </details>
+
   ### **Type:** _String_
 
   ### **Example:**
