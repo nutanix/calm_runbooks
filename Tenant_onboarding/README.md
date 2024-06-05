@@ -5,6 +5,13 @@ The process of onboarding a new tenant is facilitated by the Service Provider us
 
 ![Tenant Onboarding](/images/tenant_onboarding.png)
 
+# Tenant Onboarding Runbooks for different CALM versions:
+Use tenant onboarding runbook from this table as per your management cluster calm version.
+| Calm Version       | Link           
+| ------------------ |:-------------:|
+| v3.7.2.1             |[Tenant Onboarding](https://github.com/nutanix/calm_runbooks/tree/release/calm-3.7.2.1/Tenant_onboarding)|
+| v3.8.0           |[Tenant Onboarding](https://github.com/nutanix/calm_runbooks/tree/release/calm-3.8.0/Tenant_onboarding) |
+
 # Runbook Variables
 
 ## **`Management PC IP (Required)`**
