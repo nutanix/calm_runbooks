@@ -6,9 +6,25 @@ from requests.auth import HTTPBasicAuth
 PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_passwd = "@@{prism_central_passwd}@@".strip()
+workload_pc_config = {
+    "username": pc_username,
+    "password": pc_passwd,
+    "ip": PC_IP
+}
 
 management_pc_username = "@@{management_pc_username}@@".strip()
 management_pc_password = "@@{management_pc_password}@@".strip()
+management_pc_ip = "@@{management_pc_ip}@@".strip()
+management_pc_config = {
+    "username": management_pc_username,
+    "password": management_pc_password,
+    "ip": management_pc_ip
+}
+
+pc_config = {
+    "management": management_pc_config,
+    "workload": workload_pc_config
+}
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -22,64 +38,41 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def _get_project_spec(project):
-    url = _build_url(scheme="https", host="localhost",
-                    resource_type="/projects_internal/{}".format(project))
-    data = requests.get(url,auth=HTTPBasicAuth(management_pc_username, 
-                                               management_pc_password),
-                        timeout=None, verify=False)
+def _get_project_spec(project, pc_config):
+    url = _build_url(scheme="https",
+                    resource_type="/projects_internal/{}".format(project),
+                    host=pc_config['ip'])
+    data = requests.get(url,auth=HTTPBasicAuth(pc_config['username'], 
+                                               pc_config['password']),timeout=None, verify=False)
     return data.json()
         
-def update_project(subnet_uuid):
+def update_project(subnet_uuid, pc_config):
+    print("Updating project %s"% "@@{project_name}@@".strip())
     project = {"uuid": "@@{project_uuid}@@"}
-    payload = _get_project_spec(project['uuid'])
+    payload = _get_project_spec(project['uuid'], pc_config)
 
     for x in ['categories', 'categories_mapping', 'creation_time', 'last_update_time', 'owner_reference']:
         if x in payload['metadata'].keys():
             del payload['metadata'][x]
     del payload['status']
 
-    payload['spec']['access_control_policy_list'][0]['operation'] = "UPDATE"
+    if payload['spec']['access_control_policy_list'] is not None and len(payload['spec']['access_control_policy_list']) > 0:
+        payload['spec']['access_control_policy_list'][0]['operation'] = "UPDATE"
     
     payload["spec"]["project_detail"]["resources"]["external_network_list"].append(\
                                  {'name': "@@{vlan_name}@@", 'uuid': subnet_uuid})
     
-    url = _build_url(scheme="https",host="localhost",
-                    resource_type="/projects_internal/{}".format(project['uuid']))
+    url = _build_url(scheme="https",
+                    resource_type="/projects_internal/{}".format(project['uuid']),
+                    host=pc_config['ip'])
     data = requests.put(url, json=payload,
-                        auth=HTTPBasicAuth(management_pc_username, 
-                                           management_pc_password),
-                        timeout=None, verify=False)
+                        auth=HTTPBasicAuth(pc_config['username'], 
+                                           pc_config['password']),timeout=None, verify=False)
     if data.ok:
-        task = wait_for_completion_update(data)       
+        task = wait_for_completion(data, pc_config)       
         print("Project %s updated successfully"%"@@{project_name}@@".strip())
     else:
         print("Error while updating project : %s"%data.json())
-        exit(1)
-    
-def wait_for_completion_update(data):
-    if data.ok:
-        state = data.json()['status'].get('state')
-        while state == "PENDING":
-            _uuid = data.json()['status']['execution_context']['task_uuid']
-            url = _build_url(scheme="https", host="localhost",
-                             resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(management_pc_username, 
-                                        management_pc_password),verify=False)
-            if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
-                state = 'PENDING'
-                sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
-                print("Error in project update ---> ",responce.json().get('message_list', 
-                                        responce.json().get('error_detail', responce.json())))
-                state = 'FAILED'
-                exit(1)
-            else:
-                state = "COMPLETE"
-    else:
-        state = data.json().get('state')
-        print("Error in project update ---> ",data.json().get('message_list', 
-                                data.json().get('error_detail', data.json())))
         exit(1)
 
 def _get_default_spec():
@@ -159,29 +152,32 @@ def get_params(**params):
     payload["spec"]["resources"]["ip_config"] = params['ipam_spec']
     return payload
 
-def overlay_subnet(**params):
+def create_subnet(pc_config, **params):
+    config = pc_config.get('workload')
     payload = get_params(**params)
     url = _build_url(
                     scheme="https",
-                    resource_type="/subnets")    
+                    resource_type="/subnets",
+                    host=config["ip"])    
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(pc_username, pc_passwd),
+                         auth=HTTPBasicAuth(config["username"], config["password"]),
                          timeout=None, verify=False)
-    wait_for_completion(data)
+    wait_for_completion(data, config)
     subnet_uuid = data.json()["metadata"]["uuid"]
     print("%s overlay subnet created successfully."%payload["spec"]["name"])
     print("Please note subnet UUID for future reference :- ",data.json()["metadata"]["uuid"])
     
     if "@@{add_subnet_to_project}@@".lower() == "yes":
-        update_project(subnet_uuid)
+        update_project(subnet_uuid, pc_config.get("management"))
 
-def update_subnet(**payload):
+def update_subnet(pc_config, **payload):
     _uuid = ""
     _spec = ""
-    
+    config = pc_config.get('workload')
     _url = _build_url(scheme="https",
-                    resource_type="/subnets/%s"%payload["vlan_uuid"])
-    _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_passwd),verify=False)
+                    resource_type="/subnets/%s"%payload["vlan_uuid"],
+                    host=config["ip"])
+    _data = requests.get(_url, auth=HTTPBasicAuth(config["username"], config["password"]),verify=False)
     if _data.ok:
         if _data.json()['spec']['name'] != payload['subnet_name']:
             print("Input Error :- Provided UUID %s does not match with provided "\
@@ -205,20 +201,24 @@ def update_subnet(**payload):
     
     url = _build_url(
                     scheme="https",
-                    resource_type="/subnets/%s"%_uuid)
+                    resource_type="/subnets/%s"%_uuid,
+                    host=config["ip"])
     data = requests.put(url, json=_spec,
-                         auth=HTTPBasicAuth(pc_username, pc_passwd),
+                         auth=HTTPBasicAuth(config["username"], config["password"]),
                          timeout=None, verify=False)
-    wait_for_completion(data)
+    wait_for_completion(data, config)
     print("%s overlay subnet updated successfully."%payload["subnet_name"])
     
     if "@@{add_subnet_to_project}@@".lower() == "yes":
-        update_project(subnet_uuid=payload["vlan_uuid"])
+        # update project in management pc
+        update_project(subnet_uuid=payload["vlan_uuid"], pc_config=pc_config.get('management'))
 
-def delete_subnet(**params):
+def delete_subnet(pc_config, **params):
+    # delete subnet from workload cluster
+    config = pc_config.get('workload')
     _uuid = ""
-    _url = _build_url(scheme="https",resource_type="/subnets/%s"%params["vlan_uuid"])
-    _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_passwd),verify=False)
+    _url = _build_url(scheme="https",resource_type="/subnets/%s"%params["vlan_uuid"], host=config["ip"])
+    _data = requests.get(_url, auth=HTTPBasicAuth(config["username"], config["password"]),verify=False)
     if _data.ok:
         if _data.json()['spec']['name'] != params['subnet_name']:
             print("Input Error :- Provided UUID %s does not match with provided "\
@@ -230,13 +230,13 @@ def delete_subnet(**params):
         print(_data.json().get('message_list',_data.json().get('error_detail', _data.json())))
         exit(1)
         
-    url = _build_url(scheme="https", resource_type="/subnets/%s"%_uuid)
-    data = requests.delete(url, auth=HTTPBasicAuth(pc_username, pc_passwd),
+    url = _build_url(scheme="https", resource_type="/subnets/%s"%_uuid, host=config["ip"])
+    data = requests.delete(url, auth=HTTPBasicAuth(config["username"], config["password"]),
                             timeout=None, verify=False)
-    wait_for_completion(data)
+    wait_for_completion(data, config)
     print("%s overlay subnet deleted successfully."%params["subnet_name"])
 
-def wait_for_completion(data):
+def wait_for_completion(data, pc_config):
     if data.ok:
         state = data.json()['status'].get('state')
         if state == "DELETE_PENDING":
@@ -244,8 +244,9 @@ def wait_for_completion(data):
         while state == "PENDING":
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
-                             resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username,pc_passwd), 
+                             resource_type="/tasks/%s"%_uuid,
+                             host = pc_config.get('ip'))
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_config["username"],pc_config["password"]), 
                                     verify=False)
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
@@ -262,13 +263,13 @@ def wait_for_completion(data):
         print(data.json().get('message_list',data.json().get('error_detail', data.json())))
         exit(1)
             
-def set_params():
+def perform_operation(pc_config):
     params = @@{overlay_subnet_items}@@
     operation = "@@{operation}@@"
     params['subnet_name'] = "@@{vlan_name}@@".strip()
     params['vlan_uuid'] = "@@{vlan_uuid}@@"
     if operation == "delete":
-        delete_subnet(**params)
+        delete_subnet(pc_config, **params)
     else:                                                     
         params['ipam'] = {}
         params['set_ipam'] = "yes"
@@ -288,8 +289,8 @@ def set_params():
                 params['ipam']['dhcp_options']['boot_file_name'] = params['overlay_subnet']['ipam']['dhcp'].get('boot_file_name', "NA")
                 params['ipam']['dhcp_options']['tftp_server_name'] = params['overlay_subnet']['ipam']['dhcp'].get('tftp_server', "NA")      
         if operation == "update":
-            update_subnet(**params)
+            update_subnet(pc_config, **params)
         else:
-            overlay_subnet(**params)                                                      
+            create_subnet(pc_config, **params)                                                      
 
-set_params()
+perform_operation(pc_config)

@@ -1,12 +1,28 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
+management_pc_ip = "@@{management_pc_ip}@@".strip()
 management_username = "@@{management_pc_username}@@".strip()
 management_password = "@@{management_pc_password}@@".strip()
+management_pc_config = {
+    "username": management_username,
+    "password": management_password,
+    "ip": management_pc_ip
+}
 
 PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_passwd = "@@{prism_central_passwd}@@".strip()
+workload_pc_config = {
+    "username": pc_username,
+    "password": pc_passwd,
+    "ip": PC_IP
+}
+
+pc_config = {
+    "workload": workload_pc_config,
+    "management": management_pc_config
+}
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -20,12 +36,12 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def _get_vpc_details(vpc_name):
+def _get_vpc_details(vpc_name, pc_config):
     vpc_name = vpc_name.strip()
     vpc_details = {"kind": "vpc"}
-    url = _build_url(scheme="https",resource_type="/vpcs/list")               
+    url = _build_url(scheme="https",resource_type="/vpcs/list", host=pc_config['ip'])               
     data = requests.post(url, json=vpc_details,
-                         auth=HTTPBasicAuth(pc_username, pc_passwd),verify=False)
+                         auth=HTTPBasicAuth(pc_config["username"], pc_config["password"]),verify=False)
     if vpc_name in str(data.json()):
         for _vpc in data.json()['entities']:
             if _vpc['spec']['name'] == vpc_name:
@@ -36,11 +52,11 @@ def _get_vpc_details(vpc_name):
         print("Input Error ---> %s VPC not present on %s"%(vpc_name, PC_IP))
         exit(1)
         
-def _get_subnet_details(subnet_name):
+def _get_subnet_details(subnet_name, pc_config):
     subnet_name = subnet_name.strip()
-    url = _build_url(scheme="https",resource_type="/subnets/list")               
+    url = _build_url(scheme="https",resource_type="/subnets/list", host=pc_config['ip'])               
     data = requests.post(url, json={"kind": "subnet", "filter":"name==%s"%subnet_name},
-                         auth=HTTPBasicAuth(pc_username, pc_passwd),verify=False)
+                         auth=HTTPBasicAuth(pc_config["username"], pc_config["password"]),verify=False)
     if subnet_name in str(data.json()):
         for _subnet in data.json()['entities']:
             if _subnet['spec']['name'] == subnet_name:
@@ -51,25 +67,25 @@ def _get_subnet_details(subnet_name):
         print("Input Error ---> %s Subnet not present on %s"%(subnet_name, PC_IP))
         exit(1)
         
-def _get_project_details(project_name):
+def _get_project_details(project_name, pc_config):
     project_name = project_name.strip()
-    url = _build_url(scheme="https",host="localhost",resource_type="/projects/list")               
+    url = _build_url(scheme="https",resource_type="/projects/list", host=pc_config['ip'])               
     data = requests.post(url, json={"kind": "project"},
-                         auth=HTTPBasicAuth(management_username, 
-                         management_password),verify=False)
+                         auth=HTTPBasicAuth(pc_config["username"], pc_config["password"]),
+                         verify=False)
     if project_name in str(data.json()):
         for _project in data.json()['entities']:
             if _project['spec']['name'] == project_name:
                 return _project['metadata']['uuid']
-        print("%s Project not present on localhost"%(project_name))
+        print("%s Project not present on %s"%(project_name, pc_config.get('ip')))
         exit(1)
     else:
-        print("Input Error ---> %s Project not present on localhost"%(project_name))
+        print("Input Error ---> %s Project not present on %s"%(project_name, pc_config.get('ip')))
         exit(1)
 
 if "@@{add_subnet_to_project}@@".lower() == "yes":
     if "@@{project_name}@@".strip() not in ["","na", "none"]:
-        project_uuid = _get_project_details("@@{project_name}@@")
+        project_uuid = _get_project_details("@@{project_name}@@", pc_config.get("management"))
         print("project_uuid={}".format(project_uuid))
     else:
         print("Input Error :- Provide Valid Project Name to map Overlay subnet into project.")
@@ -78,7 +94,7 @@ if "@@{add_subnet_to_project}@@".lower() == "yes":
 overlay_subnet_items = {}
 subnet_uuid = ""
 if "@@{operation}@@" in ["update", "delete"]:
-    subnet_uuid = _get_subnet_details("@@{vlan_name}@@")
+    subnet_uuid = _get_subnet_details("@@{vlan_name}@@", pc_config.get("workload"))
     print("vlan_uuid={}".format(subnet_uuid))
         
 if "@@{vlan_name}@@".strip().lower() in ["", "na", "none"]:
@@ -120,7 +136,7 @@ if "@@{operation}@@" != "delete":
     overlay_subnet_items =  {
                               "overlay_subnet": {
                                 "vlan_uuid":subnet_uuid,
-                                "vpc": {"uuid": _get_vpc_details("@@{vpc_name}@@")},
+                                "vpc": {"uuid": _get_vpc_details("@@{vpc_name}@@", pc_config.get("workload"))},
                                 "ipam": {
                                   "dhcp": {
                                     "dns_servers": dns_servers,
