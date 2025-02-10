@@ -246,14 +246,14 @@ def wait_for_completion(data, pc_config):
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid,
                              host = pc_config.get('ip'))
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_config["username"],pc_config["password"]), 
+            response = requests.get(url, auth=HTTPBasicAuth(pc_config["username"],pc_config["password"]), 
                                     verify=False)
-            if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
+            if response.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
                 sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
-                print(responce.json().get('message_list',responce.json().get(\
-                                          'error_detail', responce.json())))
+            elif response.json()['status'] == 'FAILED':
+                print(response.json().get('message_list',response.json().get(\
+                                          'error_detail', response.json())))
                 state = 'FAILED'
                 exit(1)  
                 
