@@ -1,3 +1,6 @@
+# Runbook Info
+This runbook assigns floating IP to given VM using VM IP address.
+
 # Runbook Variables
 
 ## **`Floating IP Assignment Type (Required)`** 
@@ -18,7 +21,7 @@
 
   <details>
     <summary><b>Description</b></summary>
-    When referring to a "VM IP," it typically means the IP address assigned to a specific virtual machine (VM). In a virtualized environment, each VM is typically allocated its own unique IP address, allowing it to communicate with other devices on the network
+    When referring to a "VM IP," it typically means the IP address assigned to a specific virtual machine (VM). VM IP will be used to identify VM and assign floating IP to it. In a virtualized environment, each VM is typically allocated its own unique IP address, allowing it to communicate with other devices on the network
   </details>
 
   ### **Type:** _String_
@@ -32,7 +35,7 @@
 
   <details>
     <summary><b>Description</b></summary>
-    This variable represents the name of a Nutanix Virtual Private Cloud (VPC) and is used to identify and reference a specific VPC within a Nutanix environment.
+    This variable represents the name of a Nutanix Virtual Private Cloud (VPC) of given VM and is used to identify and reference a specific VPC within a Nutanix environment. 
     Nutanix VPC (Virtual Private Cloud) is a virtual network infrastructure provided by Nutanix for managing and organizing resources within a cloud environment. It is designed to create isolated network environments where virtual machines (VMs) and other resources can be deployed and interconnected securely.
 
     In Nutanix, a VPC allows users to define their own private network space with its own IP address range, subnets, and routing rules. It provides a logical abstraction of the network infrastructure, enabling users to create multiple VPCs within a Nutanix cluster and isolate resources based on different requirements, applications, or tenants.
@@ -64,7 +67,7 @@
 
   <details>
     <summary><b>Description</b></summary>
-    This variable represents the name of the subnet that enables external connectivity for a Nutanix cluster. Its purpose is to assign external IP addresses to the virtual machines and networking resources such as load balancers within the cluster. The external subnet should have an adequate number of available IP addresses to handle the anticipated workload of the cluster. To ensure proper functionality of the cluster, it is crucial to keep the Nutanix.
+    This variable represents the name of the subnet that enables external connectivity for a Nutanix cluster. Provide external subnet name associated with given VPC. Its purpose is to assign external IP addresses to the virtual machines and networking resources such as load balancers within the cluster. The external subnet should have an adequate number of available IP addresses to handle the anticipated workload of the cluster. To ensure proper functionality of the cluster, it is crucial to keep the Nutanix.
   </details>
 
   #### **Type:** _String_
