@@ -5,9 +5,20 @@ from requests.auth import HTTPBasicAuth
 PC_IP = "@@{PC_IP}@@".strip()
 pc_username = "@@{prism_central_username}@@".strip()
 pc_password = "@@{prism_central_passwd}@@".strip()
+workload_pc_config = {
+    "username": pc_username,
+    "password": pc_password,
+    "ip": PC_IP
+}
 
-management_username = "@@{management_pc_username}@@".strip()
-management_password = "@@{management_pc_password}@@".strip()
+management_pc_username = "@@{management_pc_username}@@".strip()
+management_pc_password = "@@{management_pc_password}@@".strip()
+management_pc_ip = "@@{management_pc_ip}@@".strip()
+management_pc_config = {
+    "username": management_pc_username,
+    "password": management_pc_password,
+    "ip": management_pc_ip
+}
 
 def _build_url(scheme, resource_type, host=PC_IP, **params):
     _base_url = "/api/nutanix/v3"
@@ -21,11 +32,11 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def create_blueprint(**params):
-    url = _build_url(scheme="https", host="localhost",
+def create_blueprint(pc_config, **params):
+    url = _build_url(scheme="https", host=pc_config['ip'],
                     resource_type="/idempotence_identifiers")
     data = requests.post(url, json={"count": 39,"valid_duration_in_minutes": 527040},
-                        auth=HTTPBasicAuth(management_username, management_password),
+                        auth=HTTPBasicAuth(pc_config['username'], pc_config['password']),
                         timeout=None, verify=False)
     uuid = []
     if data.ok:
@@ -666,23 +677,22 @@ def create_blueprint(**params):
         "name": params["blueprint_name"]
     }}
 
-    url = _build_url(scheme="https", host="localhost",
+    url = _build_url(scheme="https", host=pc_config['ip'],
                      resource_type="/blueprints")
     data = requests.post(url, json=payload,
-                         auth=HTTPBasicAuth(management_username, management_password),
+                         auth=HTTPBasicAuth(pc_config['username'], pc_config['password']),
                          timeout=None, verify=False)
-    wait_for_completion(data)
+    wait_for_completion(data, pc_config)
     print("bp_uuid={}".format(data.json()['metadata']['uuid']))
     
-def wait_for_completion(data):
+def wait_for_completion(data, pc_config):
     if data.ok:
         state = data.json()['status'].get('state')
         while state == "PENDING":
             _uuid = data.json()['status']['execution_context']['task_uuid']
-            url = _build_url(scheme="https", host="localhost",
+            url = _build_url(scheme="https", host=pc_config['ip'],
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(management_username, 
-                                                            management_password),
+            responce = requests.get(url, auth=HTTPBasicAuth(pc_config['username'], pc_config['password']),
                                     verify=False)                      
             if responce.json()['status'] in ['PENDING', 'RUNNING', 'QUEUED']:
                 state = 'PENDING'
@@ -710,4 +720,4 @@ params = {
     "blueprint_name":"@@{blueprint_name}@@".strip()
 }
 
-create_blueprint(**params)
+create_blueprint(management_pc_config, **params)

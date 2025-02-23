@@ -1,5 +1,19 @@
 # Runbook Variables
 
+## **`Management PC IP (Required)`** 
+
+  <details>
+  <summary><b>Description</b></summary>
+  Provide Management PC or CALM VM IP. This will be used for fetching project and environment details mentioned in runbook execution for creating blueprint.
+  </details>  
+  
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  10.44.66.33
+  ```
+
 ## **`Management PC Username (Required)`** 
 
   <details>
