@@ -149,7 +149,7 @@ def validate_params():
     if "@@{operation}@@" == "delete":
         delete_vpc(**params)
     else:
-        print("##### Creating VPC %s #####"%params['name'])
+        print("##### {0} VPC {1} #####".format("@@{operation}@@", params['name']))
         if params_dict.get("dns_servers", "NA") != "NA":
             params["common_domain_name_server_ip_list"] = [{}]
             params["common_domain_name_server_ip_list"][0]['ip'] = \

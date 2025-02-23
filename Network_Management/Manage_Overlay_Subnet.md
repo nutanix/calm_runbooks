@@ -1,5 +1,21 @@
 # Runbook Variables
 
+This runbook can create, update or delete overlay subnet.
+
+## **`Management PC IP (Required)`** 
+
+  <details>
+  <summary><b>Description</b></summary>
+  Provide Management PC or CALM VM IP. This will be used for updating project with newly created overlay subnet if specified in `Add Subnet to Project` option.
+  </details>  
+  
+  ### **Type:** _String_
+
+  ### **Example:**
+  ```
+  admin
+  ```
+
 ## **`Management PC Username (Required)`** 
 
   <details>
@@ -284,7 +300,7 @@
 
   <details>
   <summary><b>Description</b></summary>
-  This variable defines whether the subnet should be added to the project or not
+  This variable defines whether the subnet should be added to the project or not.
  </details>
 
   ### **Type:** _String_
@@ -300,6 +316,8 @@
   <summary><b>Description</b></summary>
 
     In Nutanix, a project refers to a logical grouping or container that allows you to organize and manage various resources within your Nutanix environment. Projects provide a way to isolate and allocate resources, such as virtual machines, networks, storage, and policies, for specific teams, departments, or applications.
+
+    Make sure VPC is added to the project specified here.
 
     Here are some key characteristics and functionalities of a Nutanix project:
 
