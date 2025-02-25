@@ -46,13 +46,14 @@ def _get_default_spec(vpc_uuid):
 def _get_vpc_details(vpc_name):
     vpc_details = {"kind": "vpc"}
     if vpc_name.lower() not in ["na", "none"]:
+        vpc_details["filter"] = "name=={}".format(vpc_name)
         url = _build_url(
                     scheme="https",
                     resource_type="/vpcs/list")               
         data = requests.post(url, json=vpc_details,
                          auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
-        if vpc_name in str(data.json()):
+        if data.ok:
             for _vpc in data.json()['entities']:
                 if _vpc['spec']['name'] == vpc_name:
                     return _vpc['metadata']['uuid']
@@ -176,13 +177,13 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            response = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
                                     verify=False)
-            if responce.json()['status'] in ['PENDING', 'RUNNING', 'DELETE_PENDING']:
+            if response.json()['status'] in ['PENDING', 'RUNNING', 'DELETE_PENDING']:
                 state = 'PENDING'
                 sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
-                print("Error while Routing Policy Opearion---> ",responce.json())
+            elif response.json()['status'] == 'FAILED':
+                print("Error while Routing Policy Opearion---> ",response.json())
                 state = 'FAILED'
                 exit(1)
             else:

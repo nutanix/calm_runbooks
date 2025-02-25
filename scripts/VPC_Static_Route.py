@@ -23,11 +23,11 @@ def _get_default_spec(vpc_uuid, subnet_uuid, ip_prefix):
                     resource_type="/vpcs/%s/route_tables"%vpc_uuid)
     data = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
     if data.ok:
-        responce = data.json()
-        del responce["status"]
+        response = data.json()
+        del response["status"]
         for x in ["last_update_time","creation_time","spec_hash","categories_mapping","owner_reference","categories"]:
-            if x in responce["metadata"].keys():
-                del responce["metadata"][x]
+            if x in response["metadata"].keys():
+                del response["metadata"][x]
     else:
         print("Error while fetching @@{vpc_name}@@ VPCs static route details.")
         exit(1)
@@ -39,27 +39,27 @@ def _get_default_spec(vpc_uuid, subnet_uuid, ip_prefix):
                         }
                     },
                     "destination": ip_prefix}
-    responce["spec"]["resources"]["static_routes_list"].append(static_route)
-    return responce
+    response["spec"]["resources"]["static_routes_list"].append(static_route)
+    return response
 
 def _get_delete_spec(vpc_uuid, subnet_uuid, ip_prefix):
     url = _build_url(scheme="https",
                     resource_type="/vpcs/%s/route_tables"%vpc_uuid)
     data = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), verify=False)
     if data.ok:
-        responce = data.json()
-        del responce["status"]
+        response = data.json()
+        del response["status"]
         for x in ["last_update_time","creation_time","spec_hash","categories_mapping","owner_reference","categories"]:
-            if x in responce["metadata"].keys():
-                del responce["metadata"][x]
+            if x in response["metadata"].keys():
+                del response["metadata"][x]
     else:
         print("Error while fetching @@{vpc_name}@@ VPCs static route details.")
         exit(1)
 
-    for x,_route in enumerate(responce["spec"]["resources"]["static_routes_list"]):
+    for x,_route in enumerate(response["spec"]["resources"]["static_routes_list"]):
         if (_route["destination"] == ip_prefix) and (_route["nexthop"]["external_subnet_reference"]["uuid"] == subnet_uuid):
-            del responce["spec"]["resources"]["static_routes_list"][x]
-            return responce
+            del response["spec"]["resources"]["static_routes_list"][x]
+            return response
     print("Input Error :-- @@{ip_prefix}@@ IP prefix with "\
           "@@{external_subnet_name}@@ external subnet not found.")
     exit(1)
@@ -87,15 +87,16 @@ def get_subnet_uuid(subnet):
 def _get_vpc_details(vpc_name):
     vpc_details = {"kind": "vpc"}
     if vpc_name.lower() not in ["na", "none"]:
+        vpc_details["filter"] = "name=={}".format(vpc_name)
         url = _build_url(
                     scheme="https",
                     resource_type="/vpcs/list")               
         data = requests.post(url, json=vpc_details,
                          auth=HTTPBasicAuth(pc_username, pc_password),
                          verify=False)
-        if vpc_name in str(data.json()):
+        if data.ok:
             for _vpc in data.json()['entities']:
-                if _vpc['spec']['name'] == vpc_name:
+                if _vpc['status']['name'] == vpc_name:
                     return _vpc['metadata']['uuid']
         else:
             print("Input Error ---> %s VPC not present on host"%vpc_name)
@@ -131,13 +132,13 @@ def wait_for_completion(data):
             _uuid = data.json()['status']['execution_context']['task_uuid']
             url = _build_url(scheme="https",
                              resource_type="/tasks/%s"%_uuid)
-            responce = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
+            response = requests.get(url, auth=HTTPBasicAuth(pc_username, pc_password), 
                                     verify=False)
-            if responce.json()['status'] in ['PENDING', 'RUNNING', 'DELETE_PENDING']:
+            if response.json()['status'] in ['PENDING', 'RUNNING', 'DELETE_PENDING']:
                 state = 'PENDING'
                 sleep(5)                
-            elif responce.json()['status'] == 'FAILED':
-                print("Error while creating Statis route ---> ",responce.json())
+            elif response.json()['status'] == 'FAILED':
+                print("Error while creating Statis route ---> ",response.json())
                 state = 'FAILED'
                 exit(1)
             else:

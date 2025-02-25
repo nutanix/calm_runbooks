@@ -19,31 +19,25 @@ def _build_url(scheme, resource_type, host=PC_IP, **params):
         url += "/{0}".format(resource_type)
     return url
 
-def _get_virtual_switch_uuid(virtual_switch_name, cluter_uuid):
-    payload = {"entity_type": "distributed_virtual_switch", 
-               "filter": "name==%s"%virtual_switch_name}
+def _get_virtual_switch_uuid(virtual_switch_name, cluster_uuid):
+
+    # fetch switch using name and cluster uuid
+    payload = {"entity_type": "distributed_virtual_switch",
+               "filter_criteria": "cluster_configuration_list.cluster_uuid=cs={0};name=={1}".format(cluster_uuid, virtual_switch_name)}
     url = _build_url(scheme="https",
-                    resource_type="/groups")                
+                    resource_type="/groups")
     data = requests.post(url, json=payload,
                          auth=HTTPBasicAuth(pc_username, pc_passwd),
                          verify=False)
+    group_results = []
     if data.ok:
-        _uuid = data.json()['group_results'][0]['entity_results'][0]['entity_id']
-        _url = "https://%s:9440/api/networking/v2.a1/dvs/virtual-switches/%s?proxyClusterUuid=%s"%(PC_IP,
-                                                                                                _uuid,
-                                                                                                cluter_uuid)
-        _data = requests.get(_url, auth=HTTPBasicAuth(pc_username, pc_passwd),verify=False)
-        if _data.json()['data']['name'] == virtual_switch_name:
-            print("virtual switch uuid ----> ",_uuid)
-            return str(_uuid)
-        else:
-            print("Input Error :- %s virtual switch not present on %s"%(virtual_switch_name, PC_IP))
-            exit(1)
+        group_results = data.json().get('group_results')
+    if group_results and len(group_results) > 0 and len(group_results[0].get('entity_results', [])) > 0:
+        return group_results[0]['entity_results'][0].get('entity_id')
     else:
-        print("Error while fetching virtual switch details :- ",data.json().get('message_list',
-                                                                                data.json().get('error_detail', 
-                                                                                data.json())))
-  
+        print("Given virtual switch with name {0} doesn't exist in given cluster. Exiting".format(virtual_switch_name))
+        exit(1)
+
 def _get_cluster_details(cluster_name):
     cluster_details = {'kind':'cluster'}
     payload = {"kind": "cluster"}
